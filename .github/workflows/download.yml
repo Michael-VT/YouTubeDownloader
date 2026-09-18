@@ -40,9 +40,9 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -69,7 +69,7 @@ jobs:
       # временные файлы _tmp_* остаются на раннере и удаляются с ним.
       - name: Upload media files
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: youtube-download
           path: |
@@ -77,4 +77,20 @@ jobs:
             downloads/*.mp3
             downloads/*.m4a
           retention-days: 1
-          if-no-files-found: error
+          if-no-files-found: warn
+
+      - name: Explain failure
+        if: failure()
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" <<'EOF'
+          ## ⚠️ Download failed
+
+          The most likely cause: **YouTube blocked the request** — GitHub Actions
+          runners use datacenter IPs, and YouTube often answers them with
+          `BotDetection` ("Sign in to confirm you're not a bot").
+
+          What helps:
+          - run the tool **locally** (see README, section *Usage: CLI / Web UI*);
+          - or use **GitHub Codespaces** (also from the browser, residential-grade egress);
+          - retrying the same link later sometimes works too.
+          EOF

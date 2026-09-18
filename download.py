@@ -482,24 +482,26 @@ def download_video(url, quality, output_path="downloads",
 
     try:
         yt = YouTube(url, on_progress_callback=on_progress)
+        title, author, length = yt.title, yt.author, yt.length
     except Exception as e:
+        # Сюда попадает и BotDetection — YouTube заблокировал запрос
         print(t("err_get_video", error=e))
-        return
+        return False
 
     if yt.video_id in downloaded_ids:
         print()
         print(t("warn_already_downloaded"))
         print(t("already_id", id=yt.video_id))
-        print(t("already_title", title=yt.title))
-        return
+        print(t("already_title", title=title))
+        return True
 
     print()
-    print(t("video_title", title=yt.title))
-    print(t("video_author", author=yt.author))
-    print(t("video_duration", duration=format_duration(yt.length)))
+    print(t("video_title", title=title))
+    print(t("video_author", author=author))
+    print(t("video_duration", duration=format_duration(length)))
     print(t("video_id", id=yt.video_id))
     print()
-    _report(progress, 10, "video_title", title=yt.title)
+    _report(progress, 10, "video_title", title=title)
 
     # ====== РЕЖИМ «ТОЛЬКО АУДИО» ======
     if quality.lower() == "audio":
@@ -507,7 +509,7 @@ def download_video(url, quality, output_path="downloads",
             yt, output_path, preferred_lang=lang, as_mp3=True, progress=progress,
         )
         if audio_path is None:
-            return
+            return False
 
         transcript_path = download_transcript(yt, output_path, preferred_lang=lang,
                                               progress=progress)
@@ -528,13 +530,13 @@ def download_video(url, quality, output_path="downloads",
         )
         print(t("ok_log_entry", txt=LOG_TXT, html=LOG_HTML))
         _report(progress, 100, "ok_log_entry", txt=LOG_TXT, html=LOG_HTML)
-        return
+        return True
 
     # ====== РЕЖИМ ВИДЕО ======
     selected_video, is_dash = pick_video_stream(yt, quality)
     if selected_video is None:
         print(t("err_no_video_stream"))
-        return
+        return False
 
     selected_audio = None
     audio_lang_name = t("audio_lang_embedded")
@@ -549,13 +551,13 @@ def download_video(url, quality, output_path="downloads",
         fallback = yt.streams.filter(progressive=True, file_extension="mp4")
         if not fallback:
             print(t("err_no_progressive"))
-            return
+            return False
         sp = sorted(fallback, key=_res_key)
         selected_video = {"max": sp[-1], "medium": sp[len(sp) // 2],
                           "low": sp[0]}.get(quality.lower())
         if selected_video is None:
             print(t("err_no_video_stream"))
-            return
+            return False
         selected_audio = None
         needs_merge = False
         audio_lang_name = t("audio_lang_embedded")
@@ -587,7 +589,7 @@ def download_video(url, quality, output_path="downloads",
             for p in (tmp_video, tmp_audio):
                 if not os.path.exists(p) or os.path.getsize(p) < 1024:
                     print(t("err_tmp_corrupt", path=p))
-                    return
+                    return False
 
             final_name = safe_filename(yt.title) + ".mp4"
             final_path = os.path.join(output_path, final_name)
@@ -604,13 +606,13 @@ def download_video(url, quality, output_path="downloads",
                 prog = yt.streams.filter(progressive=True, file_extension="mp4")
                 if not prog:
                     print(t("err_no_progressive"))
-                    return
+                    return False
                 sp = sorted(prog, key=_res_key)
                 fallback_stream = {"max": sp[-1], "medium": sp[len(sp) // 2],
                                    "low": sp[0]}.get(quality.lower())
                 if fallback_stream is None:
                     print(t("err_no_video_stream"))
-                    return
+                    return False
                 filepath = fallback_stream.download(output_path=output_path)
                 selected_video = fallback_stream
                 audio_lang_name = t("audio_lang_embedded")
@@ -634,7 +636,7 @@ def download_video(url, quality, output_path="downloads",
     except Exception as e:
         print()
         print(t("err_download", error=e))
-        return
+        return False
 
     # Транскрипция
     transcript_path = download_transcript(yt, output_path, preferred_lang=lang,
@@ -682,6 +684,7 @@ def download_video(url, quality, output_path="downloads",
     )
     print(t("ok_log_entry", txt=LOG_TXT, html=LOG_HTML))
     _report(progress, 100, "ok_log_entry", txt=LOG_TXT, html=LOG_HTML)
+    return True
 
 
 # ---------- CLI ----------
@@ -751,8 +754,9 @@ def main():
         ans = input(t("prompt_mp3")).strip().lower()
         save_mp3 = ans in ("y", "yes", "д", "да")
 
-    download_video(args.url, quality, output_path=args.output,
-                   lang=args.lang, save_mp3=save_mp3)
+    ok = download_video(args.url, quality, output_path=args.output,
+                        lang=args.lang, save_mp3=save_mp3)
+    sys.exit(0 if ok else 1)
 
 
 if __name__ == "__main__":
