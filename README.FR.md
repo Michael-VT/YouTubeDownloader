@@ -142,6 +142,8 @@ Le dépôt contient un workflow à déclenchement manuel `.github/workflows/down
 2. Renseignez l'URL, la qualité (`max`/`medium`/`low`/`audio`), la langue du contenu, la langue de l'interface et la nécessité du mp3
 3. Attendez la fin → le résumé de l'exécution affiche l'**artefact `youtube-download`** — téléchargez le zip avec vos fichiers
 
+Astuce : le formulaire de lancement a une adresse permanente — `https://github.com/VOTRE_LOGIN/VOTRE_REPOSITORY/actions/workflows/download.yml` (à mettre en favori). Cochez **publish** dans le formulaire pour joindre les fichiers à un **Release** GitHub — une page permanente avec des liens de téléchargement directs (voir *Releases* dans le dépôt, ou le lien dans le résumé de l'exécution). C'est la bonne façon de garder des fichiers « dans le dépôt » : committer des vidéos dans l'historique git le gonflerait (et GitHub bloque de toute façon les fichiers de plus de 100 Mo).
+
 ⚠️ **Limites** : les artefacts sont conservés une durée limitée (1 jour ici), la taille est plafonnée, et YouTube bloque souvent les IP de datacenters (l'erreur « Sign in to confirm you're not a bot »). Pour un usage régulier, exécutez localement.
 
 ### Option 2 : GitHub Codespaces (interface Web complète dans le cloud)

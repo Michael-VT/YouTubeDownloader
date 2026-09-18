@@ -142,6 +142,8 @@ Das Repository enthält einen manuell auslösbaren Workflow `.github/workflows/d
 2. URL, Qualität (`max`/`medium`/`low`/`audio`), Inhaltssprache, Sprache der Oberfläche und ob mp3 benötigt wird angeben
 3. Auf den Abschluss warten → in der Laufzeit-Zusammenfassung erscheint das **Artefakt `youtube-download`** — Laden Sie das Zip mit Ihren Dateien herunter
 
+Tipp: Das Startformular hat eine feste Adresse — `https://github.com/DEIN_LOGIN/DEIN_REPOSITORY/actions/workflows/download.yml` (als Lesezeichen speichern). Aktivieren Sie im Formular **publish**, um die Dateien an ein GitHub-**Release** anzuhängen — eine dauerhafte Seite mit direkten Download-Links (siehe *Releases* im Repository bzw. den Link in der Zusammenfassung des Laufs). Das ist der richtige Weg, Dateien „im Repository“ zu halten: Videos in die Git-History zu committen bläht sie auf (und GitHub blockiert ohnehin Dateien über 100 MB).
+
 ⚠️ **Einschränkungen**: Artefakte werden nur begrenzte Zeit gespeichert (hier 1 Tag), die Größe ist begrenzt, und YouTube blockiert häufig Rechenzentren-IPs (Fehler „Sign in to confirm you're not a bot“). Für regelmäßige Nutzung lokal ausführen.
 
 ### Option 2: GitHub Codespaces (vollständige Web-UI in der Cloud)

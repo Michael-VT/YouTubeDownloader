@@ -1,7 +1,8 @@
 name: Download YouTube video
 
 # Ручной запуск: вкладка Actions -> Download YouTube video -> Run workflow
-# Скачанный файл появляется как artifact в сводке запуска.
+# Скачанный файл появляется как artifact в сводке запуска; при publish=true —
+# дополнительно прикрепляется к GitHub Release (постоянная страница с файлами).
 on:
   workflow_dispatch:
     inputs:
@@ -29,9 +30,13 @@ on:
         description: "Дополнительно сохранить mp3 рядом с mp4"
         type: boolean
         default: false
+      publish:
+        description: "Прикрепить файлы к Release (постоянная страница; иначе только artifact на 1 день)"
+        type: boolean
+        default: false
 
 permissions:
-  contents: read
+  contents: write  # нужно только для создания Release; артефакт-путь ничего не пишет
 
 jobs:
   download:
@@ -63,6 +68,19 @@ jobs:
           ARGS=("$YDL_URL" "$YDL_QUALITY" --lang "$YDL_LANG" --ui-lang "$YDL_UI_LANG" -o downloads)
           if [ "$YDL_MP3" = "true" ]; then ARGS+=(--mp3); fi
           python download.py "${ARGS[@]}"
+
+      - name: Publish files to a GitHub Release
+        if: ${{ inputs.publish }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          YDL_URL: ${{ inputs.url }}
+          YDL_QUALITY: ${{ inputs.quality }}
+        run: |
+          TAG="download-$(date -u +%Y%m%d-%H%M%S)"
+          gh release create "$TAG" downloads/* \
+            --title "Download $(date -u +%Y-%m-%d %H:%M) UTC" \
+            --notes "Source: $YDL_URL | Quality: $YDL_QUALITY"
+          echo "RELEASE_URL=https://github.com/${GITHUB_REPOSITORY}/releases/tag/${TAG}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload files
         if: always()
