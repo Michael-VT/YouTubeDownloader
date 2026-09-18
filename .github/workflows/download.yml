@@ -1,0 +1,68 @@
+name: Download YouTube video
+
+# Ручной запуск: вкладка Actions -> Download YouTube video -> Run workflow
+# Скачанный файл появляется как artifact в сводке запуска.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Ссылка на YouTube-видео"
+        required: true
+      quality:
+        description: "Качество"
+        type: choice
+        default: "max"
+        options:
+          - max
+          - medium
+          - low
+          - audio
+      lang:
+        description: "Язык аудио/транскрипции"
+        default: "ru"
+      save_mp3:
+        description: "Дополнительно сохранить mp3 рядом с mp4"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          ffmpeg -version | head -n 1
+
+      - name: Run downloader
+        env:
+          YDL_URL: ${{ inputs.url }}
+          YDL_QUALITY: ${{ inputs.quality }}
+          YDL_LANG: ${{ inputs.lang }}
+          YDL_MP3: ${{ inputs.save_mp3 }}
+        run: |
+          ARGS=("$YDL_URL" "$YDL_QUALITY" --lang "$YDL_LANG" -o downloads)
+          if [ "$YDL_MP3" = "true" ]; then ARGS+=(--mp3); fi
+          python download.py "${ARGS[@]}"
+
+      - name: Upload files
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: youtube-download
+          path: downloads/
+          retention-days: 1
+          if-no-files-found: error

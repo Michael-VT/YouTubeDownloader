@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YouTube Downloader</title>
+<style>
+:root{
+  --bg:#0f1419;--bg2:#1a2029;--bg3:#242c38;--text:#e6e6e6;--dim:#8b95a5;
+  --accent:#4a90e2;--accent-hover:#357abd;--ok:#4caf50;--err:#f44336;
+  --warn:#ff9800;--border:#2d3744;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+     background:var(--bg);color:var(--text);padding:20px;line-height:1.5}
+.container{max-width:1050px;margin:0 auto}
+h1{color:#fff;margin:0 0 6px}
+.subtitle{color:var(--dim);margin-bottom:24px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+      padding:20px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.card h3{margin-top:0;color:#fff}
+label{display:block;margin-bottom:6px;color:var(--dim);font-size:13px}
+input[type=text],select{width:100%;padding:10px 12px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;
+  font-family:inherit}
+input[type=text]:focus,select:focus{outline:none;border-color:var(--accent)}
+input[type=checkbox]{accent-color:var(--accent)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.row-3{grid-template-columns:1.2fr 1fr 1fr}
+button{padding:10px 20px;background:var(--accent);color:#fff;border:none;
+       border-radius:6px;cursor:pointer;font-size:14px;font-weight:500;
+       transition:background .2s;display:inline-flex;align-items:center;gap:6px}
+button:hover:not(:disabled){background:var(--accent-hover)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+button.secondary:hover:not(:disabled){background:var(--border)}
+.actions{display:flex;gap:12px;margin-top:16px;flex-wrap:wrap}
+.info-wrap{display:grid;grid-template-columns:220px 1fr;gap:18px;align-items:start}
+.info-wrap img{width:100%;border-radius:8px;background:var(--bg3)}
+.info-title{font-size:17px;margin-bottom:10px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.info-item{background:var(--bg3);padding:8px 12px;border-radius:6px}
+.info-label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px}
+.info-value{font-size:14px;word-break:break-word}
+.badge{display:inline-block;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:500}
+.badge.ok{background:#1b3d1f;color:#6bcf76}
+.badge.warn{background:#4a3b1f;color:#f0c674}
+.badge.err{background:#4a1f1f;color:#f08080}
+.progress-bar{width:100%;height:8px;background:var(--bg3);border-radius:4px;
+              overflow:hidden;margin:14px 0}
+.progress-fill{height:100%;background:var(--accent);width:0;transition:width .3s}
+.progress-fill.err{background:var(--err)}
+.progress-fill.ok{background:var(--ok)}
+.log-console{background:#0a0e12;border:1px solid var(--border);border-radius:6px;
+  padding:12px;font-family:"Consolas","Monaco",monospace;font-size:12px;
+  max-height:320px;overflow-y:auto;white-space:pre-wrap;word-break:break-word;
+  color:#b8c5d6}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 11px;text-align:left;border-bottom:1px solid var(--border)}
+th{color:var(--dim);font-weight:500;font-size:12px;text-transform:uppercase;
+   letter-spacing:.4px}
+tr:hover{background:var(--bg3)}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.hidden{display:none}
+.spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{color:var(--dim);font-style:italic;padding:8px 0}
+@media(max-width:700px){
+  .row,.row-3,.info-grid,.info-wrap{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎬 YouTube Downloader</h1>
+  <p class="subtitle">Видео, аудио и транскрипции — прямо из браузера</p>
+
+  <div class="card">
+    <label for="url">Ссылка на видео</label>
+    <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=...">
+
+    <div class="row row-3">
+      <div>
+        <label for="quality">Качество</label>
+        <select id="quality">
+          <option value="max">Максимальное (1080p+ DASH)</option>
+          <option value="medium">Среднее</option>
+          <option value="low">Низкое</option>
+          <option value="audio">Только аудио (mp3)</option>
+        </select>
+      </div>
+      <div>
+        <label for="lang">Язык аудио / транскрипции</label>
+        <input id="lang" type="text" value="ru">
+      </div>
+      <div>
+        <label for="saveMp3">Дополнительно</label>
+        <label style="display:flex;align-items:center;color:var(--text);cursor:pointer">
+          <input type="checkbox" id="saveMp3" style="margin-right:8px">
+          Сохранить mp3 рядом с mp4
+        </label>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="btnInfo" class="secondary">🔍 Получить информацию</button>
+      <button id="btnDownload">⬇️ Скачать</button>
+    </div>
+  </div>
+
+  <div id="infoCard" class="card hidden">
+    <h3>Информация о видео</h3>
+    <div class="info-wrap">
+      <img id="thumbnail" alt="">
+      <div>
+        <div class="info-title" id="infoTitle"></div>
+        <div class="info-grid">
+          <div class="info-item"><div class="info-label">Автор</div>
+            <div class="info-value" id="infoAuthor">—</div></div>
+          <div class="info-item"><div class="info-label">Длительность</div>
+            <div class="info-value" id="infoDuration">—</div></div>
+          <div class="info-item"><div class="info-label">ID</div>
+            <div class="info-value" id="infoId">—</div></div>
+          <div class="info-item"><div class="info-label">Статус</div>
+            <div class="info-value" id="infoStatus">—</div></div>
+          <div class="info-item" style="grid-column:1/-1">
+            <div class="info-label">Доступные разрешения</div>
+            <div class="info-value" id="infoRes">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="progressCard" class="card hidden">
+    <h3>Прогресс скачивания</h3>
+    <div style="display:flex;justify-content:space-between;color:var(--dim);font-size:13px">
+      <span id="progressStage">—</span>
+      <span id="progressPercent">0%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="log-console" id="logConsole"></div>
+  </div>
+
+  <div class="card">
+    <h3>📁 Скачанные файлы</h3>
+    <div id="filesList"><div class="empty">Загрузка…</div></div>
+  </div>
+
+  <div class="card">
+    <h3>📊 Журнал загрузок</h3>
+    <div id="logTable"><div class="empty">Загрузка…</div></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let currentTaskId = null;
+let pollTimer = null;
+
+const escapeHtml = s => String(s ?? "").replace(/[&<>"']/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// ====== Информация о видео ======
+async function fetchInfo() {
+  const url = $("url").value.trim();
+  if (!url) { alert("Введите ссылку на видео"); return; }
+
+  const btn = $("btnInfo");
+  btn.disabled = true;
+  const old = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner"></span>Загрузка…';
+
+  try {
+    const r = await fetch("/api/info", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Ошибка сервера");
+
+    $("thumbnail").src = d.thumbnail;
+    $("infoTitle").textContent = d.title;
+    $("infoAuthor").textContent = d.author;
+    $("infoDuration").textContent = d.duration;
+    $("infoId").textContent = d.id;
+
+    const st = $("infoStatus");
+    st.innerHTML = d.already_downloaded
+      ? '<span class="badge warn">Уже скачано</span>'
+      : '<span class="badge ok">Новое</span>';
+
+    const resList = d.resolutions?.length
+      ? d.resolutions.join(", ")
+      : (d.progressive_resolutions?.join(", ") || "—");
+    $("infoRes").textContent = resList
+      + (d.has_captions ? "  •  есть субтитры" : "  •  субтитров нет");
+
+    $("infoCard").classList.remove("hidden");
+  } catch (e) {
+    alert("Ошибка: " + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = old;
+  }
+}
+
+// ====== Запуск скачивания ======
+async function startDownload() {
+  const url = $("url").value.trim();
+  if (!url) { alert("Введите ссылку на видео"); return; }
+
+  const payload = {
+    url,
+    quality: $("quality").value,
+    lang: $("lang").value.trim() || "ru",
+    save_mp3: $("saveMp3").checked
+  };
+
+  $("btnDownload").disabled = true;
+  $("progressCard").classList.remove("hidden");
+  $("logConsole").textContent = "";
+  $("progressFill").className = "progress-fill";
+  $("progressFill").style.width = "0%";
+  $("progressPercent").textContent = "0%";
+  $("progressStage").textContent = "Запуск…";
+
+  try {
+    const r = await fetch("/api/download", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Ошибка сервера");
+
+    currentTaskId = d.task_id;
+    startPolling();
+  } catch (e) {
+    appendLog("❌ " + e.message);
+    $("btnDownload").disabled = false;
+  }
+}
+
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(checkStatus, 800);
+  checkStatus();
+}
+
+async function checkStatus() {
+  if (!currentTaskId) return;
+  try {
+    const r = await fetch("/api/status/" + currentTaskId);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Ошибка");
+
+    if (typeof d.log === "string" && d.log !== $("logConsole").textContent) {
+      $("logConsole").textContent = d.log;
+      $("logConsole").scrollTop = $("logConsole").scrollHeight;
+    }
+    if (typeof d.percent === "number") {
+      $("progressFill").style.width = d.percent + "%";
+      $("progressPercent").textContent = d.percent + "%";
+    }
+    if (d.message) $("progressStage").textContent = d.message;
+
+    if (d.status === "done") {
+      clearInterval(pollTimer); pollTimer = null;
+      $("progressFill").classList.add("ok");
+      $("progressFill").style.width = "100%";
+      $("progressPercent").textContent = "100%";
+      $("progressStage").textContent = "✅ Готово";
+      $("btnDownload").disabled = false;
+      loadFiles(); loadLog();
+    } else if (d.status === "error") {
+      clearInterval(pollTimer); pollTimer = null;
+      $("progressFill").classList.add("err");
+      $("progressStage").textContent = "❌ Ошибка: " + (d.message || "");
+      $("btnDownload").disabled = false;
+      loadFiles(); loadLog();
+    }
+  } catch (e) {
+    appendLog("⚠️ " + e.message);
+  }
+}
+
+function appendLog(txt) {
+  const c = $("logConsole");
+  c.textContent += "\n" + txt;
+  c.scrollTop = c.scrollHeight;
+}
+
+// ====== Список файлов ======
+async function loadFiles() {
+  try {
+    const r = await fetch("/api/files");
+    const files = await r.json();
+    if (!files.length) {
+      $("filesList").innerHTML = '<div class="empty">Пока нет файлов</div>';
+      return;
+    }
+    let h = "<table><thead><tr><th>Файл</th><th>Размер</th><th></th></tr></thead><tbody>";
+    for (const f of files) {
+      const mb = (f.size / (1024 * 1024)).toFixed(2);
+      const enc = encodeURIComponent(f.name);
+      h += `<tr><td>${escapeHtml(f.name)}</td><td>${mb} MB</td>
+            <td><a href="/api/files/${enc}" download>скачать</a></td></tr>`;
+    }
+    h += "</tbody></table>";
+    $("filesList").innerHTML = h;
+  } catch (e) {
+    $("filesList").innerHTML = '<div class="empty">Ошибка: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ====== Журнал ======
+async function loadLog() {
+  try {
+    const r = await fetch("/api/log");
+    const entries = await r.json();
+    if (!entries.length) {
+      $("logTable").innerHTML = '<div class="empty">Пока нет записей</div>';
+      return;
+    }
+    let h = "<table><thead><tr><th>Дата</th><th>Тип</th><th>Название</th>" +
+            "<th>Автор</th><th>Качество</th><th>Размер</th><th>Аудио-файл</th></tr></thead><tbody>";
+    for (const e of entries) {
+      h += `<tr>
+        <td>${escapeHtml(e.date)}</td>
+        <td>${escapeHtml(e.type)}</td>
+        <td><a href="https://youtu.be/${escapeHtml(e.id)}" target="_blank"
+              rel="noopener">${escapeHtml(e.title)}</a></td>
+        <td>${escapeHtml(e.author)}</td>
+        <td>${escapeHtml(e.quality)}</td>
+        <td>${escapeHtml(e.size)}</td>
+        <td>${escapeHtml(e.audio_file)}</td>
+      </tr>`;
+    }
+    h += "</tbody></table>";
+    $("logTable").innerHTML = h;
+  } catch (e) {
+    $("logTable").innerHTML = '<div class="empty">Ошибка: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+// ====== События ======
+$("btnInfo").addEventListener("click", fetchInfo);
+$("btnDownload").addEventListener("click", startDownload);
+$("url").addEventListener("keydown", e => {
+  if (e.key === "Enter") fetchInfo();
+});
+
+// Автообновление
+loadFiles();
+loadLog();
+setInterval(() => { loadFiles(); loadLog(); }, 10000);
+</script>
+</body>
+</html>
+
+

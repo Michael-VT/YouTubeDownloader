@@ -1,0 +1,23 @@
+# Личные данные — не публикуем
+downloads/
+download_log.txt
+download_log.html
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Временные файлы загрузчика
+_tmp_v_*
+_tmp_a_*
+_tmp_mp3_*
