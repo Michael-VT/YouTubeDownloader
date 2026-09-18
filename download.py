@@ -2,13 +2,16 @@ import os
 import re
 import sys
 import html
-import json
 import argparse
 import subprocess
 import shutil
 from datetime import datetime
+
 from pytubefix import YouTube
 from pytubefix.cli import on_progress
+
+import i18n
+from i18n import t
 
 # ---------- Константы ----------
 LOG_TXT = "download_log.txt"
@@ -17,7 +20,9 @@ LOG_HTML = "download_log.html"
 DEFAULT_LANG = "ru"
 RU_LANG_CODES = {"ru", "rus", "russian", "русский"}
 
-# Регулярка для парсинга txt-лога
+# Регулярка для парсинга txt-лога.
+# ВАЖНО: формат лога — данные, а не интерфейс. Подписи полей фиксированы
+# по-русски и НЕ переводятся, иначе сломается дедупликация «уже скачано».
 LOG_LINE_RE = re.compile(
     r"^\[(?P<date>[^\]]+)\]\s*"
     r"ID:\s*(?P<id>[^\s|]+)\s*\|\s*"
@@ -33,31 +38,10 @@ LOG_LINE_RE = re.compile(
     r"Аудио-файл:\s*(?P<audio_file>.*)$"
 )
 
+
 def print_extended_help():
-    print("""
-╔══════════════════════════════════════════════════════════════════════╗
-║  YouTube Downloader — подробная справка                              ║
-╠══════════════════════════════════════════════════════════════════════╣
-║  РЕЖИМЫ КАЧЕСТВА:                                                    ║
-║    max     — максимальное доступное (1080p, 1440p, 4K через DASH)    ║
-║    medium  — среднее                                                 ║
-║    low     — минимальное (144p–360p)                                 ║
-║    audio   — только аудио в mp3 (удобно слушать в пути)              ║
-║                                                                      ║
-║  ДОПОЛНИТЕЛЬНО:                                                      ║
-║    --mp3           дополнительно сохранить mp3-дорожку рядом с mp4   ║
-║    --lang ru|en|…  язык аудио и транскрипции (по умолчанию ru)       ║
-║    -o DIR          папка для сохранения (по умолчанию downloads)     ║
-║                                                                      ║
-║  ПРИМЕРЫ:                                                            ║
-║    python download.py "https://youtu.be/XXXX" max                    ║
-║    python download.py "https://youtu.be/XXXX" audio                  ║
-║    python download.py "https://youtu.be/XXXX" medium --lang en       ║
-║    python download.py "https://youtu.be/XXXX" max --mp3 -o video     ║
-║                                                                      ║
-║  БЕЗ АРГУМЕНТОВ — интерактивный режим с пошаговыми вопросами.        ║
-╚══════════════════════════════════════════════════════════════════════╝
-""")
+    print(t("extended_help"))
+
 
 # ---------- Проверка ffmpeg / ffprobe ----------
 
@@ -114,6 +98,7 @@ def parse_log_entries(log_path=LOG_TXT):
 
 
 def append_txt_log(entry):
+    # Формат фиксирован (см. комментарий у LOG_LINE_RE) — не переводим.
     line = (
         f"[{entry['date']}] ID: {entry['id']} | "
         f"Тип: {entry['type']} | "
@@ -134,7 +119,7 @@ def append_txt_log(entry):
 def regenerate_html_log(entries):
     if not entries:
         rows = ('      <tr><td colspan="10" style="text-align:center;color:#888;">'
-                'Пока нет записей</td></tr>')
+                + html.escape(t("html_empty")) + '</td></tr>')
     else:
         rows = "\n".join(
             f"""      <tr>
@@ -153,10 +138,10 @@ def regenerate_html_log(entries):
         )
 
     content = f"""<!DOCTYPE html>
-<html lang="ru">
+<html lang="{i18n.get_language()}">
 <head>
   <meta charset="UTF-8">
-  <title>Журнал скачанных видео</title>
+  <title>{html.escape(t("html_title"))}</title>
   <style>
     body {{ font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px; }}
     h1 {{ color: #333; }}
@@ -172,21 +157,21 @@ def regenerate_html_log(entries):
   </style>
 </head>
 <body>
-  <h1>Журнал скачанных видео</h1>
-  <p class="count">Всего записей: {len(entries)}</p>
+  <h1>{html.escape(t("html_title"))}</h1>
+  <p class="count">{html.escape(t("html_total", count=len(entries)))}</p>
   <table>
     <thead>
       <tr>
-        <th>Дата</th>
+        <th>{html.escape(t("html_col_date"))}</th>
         <th>ID</th>
-        <th>Тип</th>
-        <th>Название</th>
-        <th>Автор</th>
-        <th>Качество</th>
-        <th>Язык аудио</th>
-        <th>Длительность</th>
-        <th>Размер</th>
-        <th>Аудио-файл</th>
+        <th>{html.escape(t("html_col_type"))}</th>
+        <th>{html.escape(t("html_col_title"))}</th>
+        <th>{html.escape(t("html_col_author"))}</th>
+        <th>{html.escape(t("html_col_quality"))}</th>
+        <th>{html.escape(t("html_col_audio_lang"))}</th>
+        <th>{html.escape(t("html_col_duration"))}</th>
+        <th>{html.escape(t("html_col_size"))}</th>
+        <th>{html.escape(t("html_col_audio_file"))}</th>
       </tr>
     </thead>
     <tbody>
@@ -235,6 +220,16 @@ def safe_filename(name: str, max_len: int = 120) -> str:
     name = re.sub(r'[<>:"/\\|?*]', "_", name)
     return name[:max_len].strip()
 
+def _res_key(s):
+    """Ключ сортировки потоков по разрешению ('720p' -> 720)."""
+    return int(s.resolution.replace("p", "")) if s.resolution else 0
+
+
+def _report(progress, percent, key, **kwargs):
+    """Сообщает прогресс подписчику (например, веб-интерфейсу)."""
+    if progress is not None:
+        progress(percent, t(key, **kwargs))
+
 
 # ---------- Склейка видео + аудио ----------
 
@@ -257,21 +252,21 @@ def merge_video_audio(video_path: str, audio_path: str, output_path: str) -> boo
         "-movflags", "+faststart",
         output_path,
     ]
-    print("🔗 Склейка ffmpeg:", " ".join(cmd))
+    print(t("merge_cmd", cmd=" ".join(cmd)))
     result = subprocess.run(
         cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
     )
     if result.returncode != 0:
-        print(f"❌ ffmpeg вернул код {result.returncode}")
-        print(f"   stderr: {result.stderr[-800:]}")
+        print(t("err_ffmpeg_code", code=result.returncode))
+        print(t("stderr_tail", stderr=result.stderr[-800:]))
         return False
 
     if not os.path.exists(output_path) or os.path.getsize(output_path) < 1024:
-        print("❌ Итоговый файл отсутствует или подозрительно мал.")
+        print(t("err_output_missing"))
         return False
 
     if not has_audio_stream(output_path):
-        print("❌ В итоговом файле НЕ обнаружена аудиодорожка.")
+        print(t("err_no_audio_track_out"))
         return False
 
     return True
@@ -293,20 +288,21 @@ def convert_to_mp3(source_path: str, mp3_path: str, bitrate: str = "192k") -> bo
         cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
     )
     if result.returncode != 0:
-        print(f"❌ Ошибка конвертации в mp3: {result.stderr[-400:]}")
+        print(t("err_mp3_convert", stderr=result.stderr[-400:]))
         return False
     return os.path.exists(mp3_path) and os.path.getsize(mp3_path) > 1024
 
 
 # ---------- Транскрипция ----------
 
-def download_transcript(yt, output_dir: str, preferred_lang: str = DEFAULT_LANG):
+def download_transcript(yt, output_dir: str, preferred_lang: str = DEFAULT_LANG,
+                        progress=None):
     if not yt.captions:
-        print("ℹ️  Субтитры/транскрипция недоступны.")
+        print(t("info_no_captions"))
         return None
 
     available = {c.code: c for c in yt.captions}
-    print(f"📄 Доступные субтитры: {', '.join(available.keys())}")
+    print(t("info_available_subs", codes=", ".join(available.keys())))
 
     chosen = None
     for code, caption in available.items():
@@ -326,7 +322,7 @@ def download_transcript(yt, output_dir: str, preferred_lang: str = DEFAULT_LANG)
     if chosen is None:
         chosen = next(iter(available.values()))
 
-    print(f"📄 Язык транскрипции: {chosen.code}")
+    print(t("info_transcript_lang", code=chosen.code))
 
     base_name = safe_filename(yt.title)
     transcript_path = os.path.join(output_dir, f"{base_name}.transcript.txt")
@@ -346,17 +342,18 @@ def download_transcript(yt, output_dir: str, preferred_lang: str = DEFAULT_LANG)
         text = re.sub(r"<[^>]+>", "", "\n".join(clean_lines))
 
         with open(transcript_path, "w", encoding="utf-8") as f:
-            f.write(f"# Транскрипция: {yt.title}\n")
-            f.write(f"# Автор: {yt.author}\n")
-            f.write(f"# Язык: {chosen.code}\n")
-            f.write(f"# Источник: https://youtu.be/{yt.video_id}\n")
+            f.write(t("tr_title", title=yt.title) + "\n")
+            f.write(t("tr_author", author=yt.author) + "\n")
+            f.write(t("tr_lang", lang=chosen.code) + "\n")
+            f.write(t("tr_source", url=f"https://youtu.be/{yt.video_id}") + "\n")
             f.write("#" + "=" * 60 + "\n\n")
             f.write(text)
 
-        print(f"✅ Транскрипция: {transcript_path}")
+        print(t("ok_transcript", path=transcript_path))
+        _report(progress, 90, "ok_transcript", path=transcript_path)
         return transcript_path
     except Exception as e:
-        print(f"⚠️  Ошибка транскрипции: {e}")
+        print(t("warn_transcript_error", error=e))
         return None
 
 
@@ -374,36 +371,39 @@ def pick_audio_stream(yt, preferred_lang: str = DEFAULT_LANG):
     if not audio_streams:
         return None, "unknown"
 
-    print("🎧 Доступные аудиодорожки:")
+    print(t("audio_tracks_available"))
     for s in audio_streams[:10]:
         track = getattr(s, "audio_track_name", None) or "default"
-        default_mark = " (по умолчанию)" if getattr(s, "is_default_audio_track", False) else ""
-        print(f"   • {track} | {s.abr} | itag={s.itag} | ext={s.subtype}{default_mark}")
+        default_mark = " *" if getattr(s, "is_default_audio_track", False) else ""
+        print(t("audio_track_line", track=track, abr=s.abr, itag=s.itag,
+                ext=s.subtype, default=default_mark))
 
     # 1. Приоритет — русская дорожка
     if preferred_lang == "ru":
         for s in audio_streams:
             name = (getattr(s, "audio_track_name", None) or "").lower()
             if any(code in name for code in RU_LANG_CODES):
-                print(f"✅ Выбрана аудиодорожка: {getattr(s, 'audio_track_name', 'default')} ({s.abr})")
+                print(t("audio_selected",
+                        track=getattr(s, "audio_track_name", "default"), abr=s.abr))
                 return s, getattr(s, "audio_track_name", "default")
 
     # 2. Любая дорожка с указанным языком
     for s in audio_streams:
         name = (getattr(s, "audio_track_name", None) or "").lower()
         if preferred_lang.lower() in name:
-            print(f"✅ Выбрана аудиодорожка: {getattr(s, 'audio_track_name', 'default')} ({s.abr})")
+            print(t("audio_selected",
+                    track=getattr(s, "audio_track_name", "default"), abr=s.abr))
             return s, getattr(s, "audio_track_name", "default")
 
     # 3. Дорожка по умолчанию
     for s in audio_streams:
         if getattr(s, "is_default_audio_track", False):
-            print(f"ℹ️  Языковая дорожка не найдена, используем default ({s.abr})")
+            print(t("audio_using_default", abr=s.abr))
             return s, getattr(s, "audio_track_name", "default")
 
     # 4. Самая качественная
     s = audio_streams[0]
-    print(f"ℹ️  Используем самую качественную дорожку ({s.abr})")
+    print(t("audio_using_best", abr=s.abr))
     return s, getattr(s, "audio_track_name", "default")
 
 
@@ -416,12 +416,10 @@ def pick_video_stream(yt, quality: str):
         progressive = yt.streams.filter(progressive=True, file_extension="mp4")
         if not progressive:
             return None, False
-        sp = sorted(progressive,
-                    key=lambda s: int(s.resolution.replace("p", "")) if s.resolution else 0)
+        sp = sorted(progressive, key=_res_key)
         return {"max": sp[-1], "medium": sp[len(sp) // 2], "low": sp[0]}.get(quality.lower()), False
 
-    sv = sorted(all_video,
-                key=lambda s: int(s.resolution.replace("p", "")) if s.resolution else 0)
+    sv = sorted(all_video, key=_res_key)
     if quality.lower() == "max":
         return sv[-1], True
     if quality.lower() == "medium":
@@ -433,76 +431,86 @@ def pick_video_stream(yt, quality: str):
 
 # ---------- Режим «только аудио» ----------
 
-def download_audio_only(yt, output_path, preferred_lang, as_mp3=True):
+def download_audio_only(yt, output_path, preferred_lang, as_mp3=True, progress=None):
     """Скачивает только аудио. Если as_mp3 и есть ffmpeg — конвертирует в mp3."""
     selected_audio, audio_lang_name = pick_audio_stream(yt, preferred_lang)
     if selected_audio is None:
-        print("❌ Не удалось выбрать аудиодорожку")
+        print(t("err_no_audio_stream"))
         return None, None
 
-    print(f"\n🎧 Аудио: {audio_lang_name} ({selected_audio.abr})")
+    print()
+    print(t("audio_header", name=audio_lang_name, abr=selected_audio.abr))
 
     # Скачиваем исходное аудио во временный файл
     tmp_name = f"_tmp_a_{yt.video_id}.{selected_audio.subtype}"
+    _report(progress, 30, "dl_audio_stream")
     tmp_path = selected_audio.download(output_path=output_path, filename=tmp_name)
-    print(f"⬇️  Скачано: {tmp_path}")
+    print(t("downloaded", path=tmp_path))
 
     if as_mp3 and check_ffmpeg():
         final_name = safe_filename(yt.title) + ".mp3"
         final_path = os.path.join(output_path, final_name)
-        print("🎵 Конвертация в mp3...")
+        print(t("converting_mp3"))
+        _report(progress, 55, "converting_mp3")
         if convert_to_mp3(tmp_path, final_path):
             os.remove(tmp_path)
-            print(f"✅ Аудио сохранено: {final_path}")
+            print(t("ok_audio_saved", path=final_path))
+            _report(progress, 80, "ok_audio_saved", path=final_path)
             return final_path, audio_lang_name
         else:
-            print("⚠️  Не удалось конвертировать в mp3, оставляю исходный файл")
+            print(t("warn_mp3_failed"))
             return tmp_path, audio_lang_name
     else:
-        print(f"✅ Аудио сохранено: {tmp_path}")
+        print(t("ok_audio_saved", path=tmp_path))
         return tmp_path, audio_lang_name
 
 
 # ---------- Основной сценарий ----------
 
 def download_video(url, quality, output_path="downloads",
-                   lang=DEFAULT_LANG, save_mp3=False):
+                   lang=DEFAULT_LANG, save_mp3=False, progress=None):
     """
     Качество: 'max' / 'medium' / 'low' / 'audio'.
     save_mp3: если True — дополнительно сохраняет mp3-дорожку рядом с видео.
+    progress: опциональный callback(percent, message) для индикации прогресса.
     """
     os.makedirs(output_path, exist_ok=True)
 
     downloaded_ids = load_downloaded_ids()
     if downloaded_ids:
-        print(f"ℹ️  В журнале уже {len(downloaded_ids)} записей.")
+        print(t("info_log_entries", count=len(downloaded_ids)))
 
     try:
         yt = YouTube(url, on_progress_callback=on_progress)
     except Exception as e:
-        print(f"❌ Ошибка получения видео: {e}")
+        print(t("err_get_video", error=e))
         return
 
     if yt.video_id in downloaded_ids:
-        print(f"\n⚠️  Уже скачано ранее. Пропускаем.")
-        print(f"   ID: {yt.video_id}")
-        print(f"   Название: {yt.title}")
+        print()
+        print(t("warn_already_downloaded"))
+        print(t("already_id", id=yt.video_id))
+        print(t("already_title", title=yt.title))
         return
 
-    print(f"\n🎬 Название: {yt.title}")
-    print(f"👤 Автор: {yt.author}")
-    print(f"⏱  Длительность: {format_duration(yt.length)}")
-    print(f"🆔 ID: {yt.video_id}\n")
+    print()
+    print(t("video_title", title=yt.title))
+    print(t("video_author", author=yt.author))
+    print(t("video_duration", duration=format_duration(yt.length)))
+    print(t("video_id", id=yt.video_id))
+    print()
+    _report(progress, 10, "video_title", title=yt.title)
 
     # ====== РЕЖИМ «ТОЛЬКО АУДИО» ======
     if quality.lower() == "audio":
         audio_path, audio_lang_name = download_audio_only(
-            yt, output_path, preferred_lang=lang, as_mp3=True,
+            yt, output_path, preferred_lang=lang, as_mp3=True, progress=progress,
         )
         if audio_path is None:
             return
 
-        transcript_path = download_transcript(yt, output_path, preferred_lang=lang)
+        transcript_path = download_transcript(yt, output_path, preferred_lang=lang,
+                                              progress=progress)
         size_mb = os.path.getsize(audio_path) / (1024 * 1024)
 
         write_log_entry(
@@ -518,42 +526,49 @@ def download_video(url, quality, output_path="downloads",
             filepath=os.path.abspath(audio_path),
             audio_file=os.path.abspath(audio_path),
         )
-        print(f"📝 Запись добавлена в {LOG_TXT} и {LOG_HTML}")
+        print(t("ok_log_entry", txt=LOG_TXT, html=LOG_HTML))
+        _report(progress, 100, "ok_log_entry", txt=LOG_TXT, html=LOG_HTML)
         return
 
     # ====== РЕЖИМ ВИДЕО ======
     selected_video, is_dash = pick_video_stream(yt, quality)
     if selected_video is None:
-        print("❌ Не удалось найти подходящий видеопоток")
+        print(t("err_no_video_stream"))
         return
 
     selected_audio = None
-    audio_lang_name = "встроенная"
+    audio_lang_name = t("audio_lang_embedded")
     if is_dash:
         selected_audio, audio_lang_name = pick_audio_stream(yt, preferred_lang=lang)
 
     # Если нужно склеивать, но нет ffmpeg — переключаемся на progressive
     needs_merge = is_dash and selected_audio is not None
     if needs_merge and not check_ffmpeg():
-        print("⚠️  ffmpeg не найден — DASH (1080p+) невозможен.")
-        print("   Переключаюсь на progressive (максимум 720p).")
+        print(t("warn_no_ffmpeg_dash"))
+        print(t("warn_fallback_progressive"))
         fallback = yt.streams.filter(progressive=True, file_extension="mp4")
         if not fallback:
-            print("❌ Progressive недоступен. Установите ffmpeg.")
+            print(t("err_no_progressive"))
             return
-        sp = sorted(fallback,
-                    key=lambda s: int(s.resolution.replace("p", "")) if s.resolution else 0)
+        sp = sorted(fallback, key=_res_key)
         selected_video = {"max": sp[-1], "medium": sp[len(sp) // 2],
                           "low": sp[0]}.get(quality.lower())
+        if selected_video is None:
+            print(t("err_no_video_stream"))
+            return
         selected_audio = None
         needs_merge = False
-        audio_lang_name = "встроенная"
+        audio_lang_name = t("audio_lang_embedded")
 
-    print(f"\n🎞  Видео: {selected_video.resolution} "
-          f"({'DASH' if selected_video.is_adaptive else 'progressive'})")
+    print()
+    print(t("video_stream_info", res=selected_video.resolution,
+            mode="DASH" if selected_video.is_adaptive else "progressive"))
     if selected_audio:
-        print(f"🎧 Аудио: {audio_lang_name} ({selected_audio.abr})")
-    print(f"🔧 Склейка: {'да' if needs_merge else 'нет'}\n")
+        print(t("audio_header", name=audio_lang_name, abr=selected_audio.abr))
+    print(t("merge_label", value=t("word_yes") if needs_merge else t("word_no")))
+    print()
+    _report(progress, 20, "video_stream_info", res=selected_video.resolution,
+            mode="DASH" if selected_video.is_adaptive else "progressive")
 
     try:
         if needs_merge:
@@ -561,23 +576,26 @@ def download_video(url, quality, output_path="downloads",
             tmp_v_name = f"_tmp_v_{yt.video_id}.{selected_video.subtype}"
             tmp_a_name = f"_tmp_a_{yt.video_id}.{selected_audio.subtype}"
 
-            print("⬇️  Скачивание видеопотока...")
+            print(t("dl_video_stream"))
+            _report(progress, 30, "dl_video_stream")
             tmp_video = selected_video.download(output_path=output_path, filename=tmp_v_name)
-            print("⬇️  Скачивание аудиопотока...")
+            print(t("dl_audio_stream"))
+            _report(progress, 50, "dl_audio_stream")
             tmp_audio = selected_audio.download(output_path=output_path, filename=tmp_a_name)
 
             # Проверяем, что оба файла реально есть и не пустые
             for p in (tmp_video, tmp_audio):
                 if not os.path.exists(p) or os.path.getsize(p) < 1024:
-                    print(f"❌ Временный файл повреждён или пуст: {p}")
+                    print(t("err_tmp_corrupt", path=p))
                     return
 
             final_name = safe_filename(yt.title) + ".mp4"
             final_path = os.path.join(output_path, final_name)
 
-            print("🔗 Склейка видео и аудио...")
+            print(t("merging"))
+            _report(progress, 65, "merging")
             if not merge_video_audio(tmp_video, tmp_audio, final_path):
-                print("⚠️  Склейка не удалась. Пробую fallback: progressive.")
+                print(t("warn_merge_failed"))
                 # Чистим временные
                 for p in (tmp_video, tmp_audio):
                     if os.path.exists(p):
@@ -585,38 +603,48 @@ def download_video(url, quality, output_path="downloads",
                 # Fallback на progressive
                 prog = yt.streams.filter(progressive=True, file_extension="mp4")
                 if not prog:
-                    print("❌ Progressive недоступен.")
+                    print(t("err_no_progressive"))
                     return
-                sp = sorted(prog,
-                            key=lambda s: int(s.resolution.replace("p", "")) if s.resolution else 0)
+                sp = sorted(prog, key=_res_key)
                 fallback_stream = {"max": sp[-1], "medium": sp[len(sp) // 2],
                                    "low": sp[0]}.get(quality.lower())
+                if fallback_stream is None:
+                    print(t("err_no_video_stream"))
+                    return
                 filepath = fallback_stream.download(output_path=output_path)
                 selected_video = fallback_stream
-                audio_lang_name = "встроенная"
-                print(f"✅ Сохранено (fallback): {filepath}")
+                audio_lang_name = t("audio_lang_embedded")
+                print(t("ok_saved_fallback", path=filepath))
             else:
                 filepath = final_path
                 # Чистим временные только после успешной склейки
                 for p in (tmp_video, tmp_audio):
                     if os.path.exists(p):
                         os.remove(p)
-                print(f"\n✅ Видео сохранено: {filepath}")
+                print()
+                print(t("ok_video_saved", path=filepath))
+                _report(progress, 80, "ok_video_saved", path=filepath)
         else:
+            _report(progress, 30, "dl_video_stream")
             filepath = selected_video.download(output_path=output_path)
-            print(f"\n✅ Видео сохранено: {filepath}")
+            print()
+            print(t("ok_video_saved", path=filepath))
+            _report(progress, 80, "ok_video_saved", path=filepath)
 
     except Exception as e:
-        print(f"\n❌ Ошибка при скачивании: {e}")
+        print()
+        print(t("err_download", error=e))
         return
 
     # Транскрипция
-    transcript_path = download_transcript(yt, output_path, preferred_lang=lang)
+    transcript_path = download_transcript(yt, output_path, preferred_lang=lang,
+                                          progress=progress)
 
     # Опционально — mp3 рядом с видео
     audio_file_path = None
     if save_mp3:
-        print("\n🎵 Дополнительно сохраняю mp3-дорожку...")
+        print()
+        print(t("extra_mp3"))
         audio_stream, _ = pick_audio_stream(yt, preferred_lang=lang)
         if audio_stream is not None:
             tmp_a_name = f"_tmp_mp3_{yt.video_id}.{audio_stream.subtype}"
@@ -627,10 +655,11 @@ def download_video(url, quality, output_path="downloads",
                 if os.path.exists(tmp_a):
                     os.remove(tmp_a)
                 audio_file_path = os.path.abspath(mp3_path)
-                print(f"✅ mp3 сохранён: {mp3_path}")
+                print(t("ok_mp3_saved", path=mp3_path))
+                _report(progress, 95, "ok_mp3_saved", path=mp3_path)
             else:
                 audio_file_path = os.path.abspath(tmp_a)
-                print(f"⚠️  mp3 не сконвертирован, оставлен исходный: {tmp_a}")
+                print(t("warn_mp3_kept_source", path=tmp_a))
 
     # Размер основного файла
     try:
@@ -651,31 +680,51 @@ def download_video(url, quality, output_path="downloads",
         filepath=os.path.abspath(filepath),
         audio_file=audio_file_path,
     )
-    print(f"📝 Запись добавлена в {LOG_TXT} и {LOG_HTML}")
+    print(t("ok_log_entry", txt=LOG_TXT, html=LOG_HTML))
+    _report(progress, 100, "ok_log_entry", txt=LOG_TXT, html=LOG_HTML)
 
 
 # ---------- CLI ----------
 
+def _ui_lang_from_argv(argv):
+    """Достаёт --ui-lang/--locale из argv до argparse, чтобы -h тоже был переведён."""
+    for i, arg in enumerate(argv):
+        if arg in ("--ui-lang", "--locale") and i + 1 < len(argv):
+            return argv[i + 1]
+        for prefix in ("--ui-lang=", "--locale="):
+            if arg.startswith(prefix):
+                return arg[len(prefix):]
+    return None
+
+
 def main():
+    i18n.set_language(_ui_lang_from_argv(sys.argv[1:]) or i18n.detect_language())
+
     parser = argparse.ArgumentParser(
         prog="download.py",
-        description="Скачивание видео, аудио и транскрипций с YouTube.",
+        description=t("app_desc"),
         add_help=True,
     )
-    parser.add_argument("url", nargs="?", help="Ссылка на YouTube видео")
+    parser.add_argument("url", nargs="?", help=t("help_url"))
     parser.add_argument(
         "quality", nargs="?",
         choices=["max", "medium", "low", "audio"],
-        help="Качество: max / medium / low / audio",
+        help=t("help_quality"),
     )
     parser.add_argument("-l", "--lang", default=DEFAULT_LANG,
-                        help=f"Язык аудио/транскрипции (по умолчанию {DEFAULT_LANG})")
+                        help=t("help_lang", default=DEFAULT_LANG))
     parser.add_argument("--mp3", action="store_true",
-                        help="Дополнительно сохранить mp3-дорожку")
+                        help=t("help_mp3"))
     parser.add_argument("-o", "--output", default="downloads",
-                        help="Папка для сохранения (по умолчанию downloads)")
+                        help=t("help_output"))
+    parser.add_argument("-u", "--ui-lang", default=None,
+                        help=t("help_ui_lang"))
 
     args = parser.parse_args()
+
+    # Язык мог быть задан короткой формой -u; применяем после разбора
+    if args.ui_lang:
+        i18n.set_language(args.ui_lang)
 
     # Запуск без аргументов — показываем справку
     if args.url is None:
@@ -685,12 +734,13 @@ def main():
 
     # Если URL есть, но качество не указано — интерактивный выбор
     if args.quality is None:
-        print("\nВыберите качество:")
-        print("  1 — максимальное (1080p+ через DASH)")
-        print("  2 — среднее")
-        print("  3 — низкое")
-        print("  4 — только аудио (mp3)")
-        choice = input("Номер (1/2/3/4) [1]: ").strip() or "1"
+        print()
+        print(t("choose_quality"))
+        print(t("q_max"))
+        print(t("q_medium"))
+        print(t("q_low"))
+        print(t("q_audio"))
+        choice = input(t("prompt_quality")).strip() or "1"
         quality = {"1": "max", "2": "medium", "3": "low", "4": "audio"}.get(choice, "max")
     else:
         quality = args.quality
@@ -698,7 +748,7 @@ def main():
     # Если mp3 не указан явно и это не режим audio — спросим (только в интерактиве)
     save_mp3 = args.mp3
     if quality != "audio" and not args.mp3 and args.quality is None:
-        ans = input("Сохранить также mp3-дорожку? (y/N): ").strip().lower()
+        ans = input(t("prompt_mp3")).strip().lower()
         save_mp3 = ans in ("y", "yes", "д", "да")
 
     download_video(args.url, quality, output_path=args.output,
@@ -707,5 +757,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

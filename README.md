@@ -1,163 +1,179 @@
+English | [Русский](README.RU.md) | [Українська](README.UK.md) | [Português](README.PT.md) | [Deutsch](README.DE.md) | [Français](README.FR.md)
+
 # 🎬 YouTube Downloader
 
-Скачивает с YouTube **видео (mp4)**, **аудио (mp3)** и **текстовую транскрипцию** (по субтитрам) — на выбор или всё сразу. Два интерфейса:
+Downloads **video (mp4)**, **audio (mp3)** and **text transcripts** (from subtitles) from YouTube — any of them, or all at once. Two interfaces:
 
-- **CLI** — `download.py`, консольный инструмент на Python;
-- **Веб-интерфейс** — `web_server.py` (Flask) + `web_ui.html` (JS в браузере): прогресс-бар, журнал загрузок, список файлов со ссылками на скачивание.
+- **CLI** — `download.py`, a console tool written in Python;
+- **Web UI** — `web_server.py` (Flask) + `web_ui.html` (JS in the browser): progress bar, download log, file list with download links.
 
-Лицензия — **MIT**: использование бесплатно, без ограничений (см. [LICENSE](LICENSE)).
+![YouTube Downloader](Screeshot/YouTubDownloader.png)
 
-## Возможности
+Interface languages: **English, Русский, Українська, Português, Deutsch, Français**.
 
-- 🎥 Видео в максимальном качестве (1080p / 1440p / 4K через DASH-потоки со склейкой ffmpeg), среднее или низкое
-- 🎧 Только аудио с конвертацией в mp3 (192 kbps) — удобно для прослушивания в дороге
-- 📄 Текстовая транскрипция из субтитров (очищенная от таймкодов и разметки) рядом с медиафайлом
-- 🌍 Выбор языка аудиодорожки и субтитров (`--lang ru`, `en`, …); приоритет русской дорожки при multi-language видео
-- 🔁 Защита от дублей: уже скачанные видео пропускаются (ведётся журнал по ID)
-- 📝 Журнал загрузок в двух форматах: `download_log.txt` и `download_log.html`
-- 🖥️ Веб-UI: информация о видео до скачивания, живой прогресс, история, скачивание файлов из браузера
+License: **MIT** — free to use without restrictions (see [LICENSE](LICENSE)).
 
-## Структура репозитория
+## Features
+
+- 🎥 Video at maximum quality (1080p / 1440p / 4K via DASH streams merged with ffmpeg), medium or low
+- 🎧 Audio only, converted to mp3 (192 kbps) — great for listening on the go
+- 📄 Text transcript from subtitles (cleaned of timecodes and markup) saved next to the media file
+- 🌍 Audio track and subtitle language selection (`--lang ru`, `en`, …); Russian track gets priority on multi-language videos
+- 🔁 Duplicate protection: already downloaded videos are skipped (an ID-based log is kept)
+- 📝 Download log in two formats: `download_log.txt` and `download_log.html`
+- 🖥️ Web UI: video info before downloading, live progress, history, file downloads straight from the browser
+- 🌐 Interface language switchable in both CLI and Web UI (6 languages, auto-detected by default)
+
+## Repository structure
 
 ```
-├── download.py            # CLI-загрузчик (основная логика)
-├── web_server.py          # Веб-сервер (Flask API + раздача UI)
-├── web_ui.html            # Веб-интерфейс (HTML/JS)
-├── requirements.txt       # Зависимости Python
-├── .github/workflows/     # GitHub Actions: скачивание без локальной установки
-├── .devcontainer/         # Настройка GitHub Codespaces
-└── legacy/                # Старые версии скрипта (история разработки)
+├── download.py            # CLI downloader (core logic)
+├── web_server.py          # Web server (Flask API + serves the UI)
+├── web_ui.html            # Web interface (HTML/JS)
+├── i18n.py                # Interface language engine
+├── locales/               # Translations: en, ru, uk, pt, de, fr
+├── requirements.txt       # Python dependencies
+├── Screeshot/             # Screenshot used in the READMEs
+├── .github/workflows/     # GitHub Actions: download without a local install
+├── .devcontainer/         # GitHub Codespaces setup
+└── legacy/                # Old script versions (development history)
 ```
 
-Скачанные файлы сохраняются в папку `downloads/`, журнал — в корень проекта. Оба пути (и личные файлы) исключены из git через `.gitignore`.
+Downloaded files go to `downloads/`, the log lives in the project root. Both paths (and personal files) are excluded from git via `.gitignore`.
 
-## Установка (локально)
+## Installation (local)
 
-### 1. Требования
+### 1. Requirements
 
-- **Python 3.10+** (проверено на 3.12)
-- **ffmpeg** — нужен для склейки DASH-потоков (качество выше 720p) и конвертации в mp3. Без него программа работает, но видео ограничено 720p (progressive), а аудио останется в исходном формате (m4a)
+- **Python 3.10+** (tested on 3.12)
+- **ffmpeg** — required for merging DASH streams (quality above 720p) and mp3 conversion. Without it the program still works, but video is limited to 720p (progressive) and audio stays in its original format (m4a)
 
-### 2. Установка ffmpeg
+### 2. Installing ffmpeg
 
-| ОС | Команда |
+| OS | Command |
 |---|---|
 | macOS | `brew install ffmpeg` |
 | Ubuntu / Debian | `sudo apt install ffmpeg` |
-| Windows | `winget install Gyan.FFmpeg` (или `choco install ffmpeg`), затем перезапустить терминал |
+| Windows | `winget install Gyan.FFmpeg` (or `choco install ffmpeg`), then restart the terminal |
 
-Проверка: `ffmpeg -version`
+Verify: `ffmpeg -version`
 
-### 3. Клонирование и зависимости
+### 3. Cloning and dependencies
 
 ```bash
-git clone https://github.com/ВАШ_ЛОГИН/ВАШ_РЕПОЗИТОРИЙ.git
-cd ВАШ_РЕПОЗИТОРИЙ
+git clone https://github.com/YOUR_LOGIN/YOUR_REPOSITORY.git
+cd YOUR_REPOSITORY
 
 python3 -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-## Использование: CLI
+## Usage: CLI
 
-### Интерактивный режим
+### Interactive mode
 
 ```bash
 python download.py
 ```
 
-Задаст вопросы: ссылка → качество → язык → сохранять ли mp3.
+Asks step by step: URL → quality → language → whether to save mp3.
 
-### С аргументами
+### With arguments
 
 ```bash
-python download.py "https://youtu.be/XXXX" max          # видео макс. качества + транскрипция
-python download.py "https://youtu.be/XXXX" audio        # только mp3 + транскрипция
+python download.py "https://youtu.be/XXXX" max          # best-quality video + transcript
+python download.py "https://youtu.be/XXXX" audio        # mp3 only + transcript
 python download.py "https://youtu.be/XXXX" medium --lang en
-python download.py "https://youtu.be/XXXX" max --mp3 -o video   # + mp3, папка video/
+python download.py "https://youtu.be/XXXX" max --mp3 -o video   # + mp3, folder video/
+python download.py "https://youtu.be/XXXX" max --ui-lang de     # German interface
 ```
 
-| Аргумент | Значение |
+| Argument | Meaning |
 |---|---|
-| `url` | ссылка на видео (без неё — интерактивный режим) |
+| `url` | video URL (without it — interactive mode) |
 | `quality` | `max` / `medium` / `low` / `audio` |
-| `--lang`, `-l` | язык аудио и транскрипции (по умолчанию `ru`) |
-| `--mp3` | дополнительно сохранить mp3-дорожку рядом с mp4 |
-| `-o`, `--output` | папка сохранения (по умолчанию `downloads`) |
+| `--lang`, `-l` | audio and transcript language (default: `ru`) |
+| `--mp3` | additionally save an mp3 track next to the mp4 |
+| `-o`, `--output` | output folder (default: `downloads`) |
+| `--ui-lang`, `-u` | interface language: `en`/`ru`/`uk`/`pt`/`de`/`fr` |
 
-Полная справка: `python download.py --help`
+The interface language is auto-detected from your system locale (`LANG`/`LC_ALL`); use `--ui-lang` to override, or set the `YTD_LANG` environment variable.
 
-Результат в `downloads/`:
+Full help: `python download.py --help`
+
+Result in `downloads/`:
 
 ```
-Название видео.mp4                  # видео (или .mp3 в режиме audio)
-Название видео.mp3                  # при --mp3 или quality=audio
-Название видео.transcript.txt       # транскрипция из субтитров
+Video title.mp4                  # video (or .mp3 in audio mode)
+Video title.mp3                  # with --mp3 or quality=audio
+Video title.transcript.txt       # transcript from subtitles
 ```
 
-## Использование: веб-интерфейс
+## Usage: Web UI
 
 ```bash
 python web_server.py
 ```
 
-Откройте **http://127.0.0.1:5000** — интерфейс в браузере:
+Open **http://127.0.0.1:5000** in your browser:
 
-1. Вставьте ссылку → **«Получить информацию»**: обложка, автор, длительность, доступные разрешения, наличие субтитров, статус («новое» / «уже скачано»)
-2. Выберите качество и язык → **«Скачать»**: живой прогресс-бар и консольный лог
-3. Внизу — список готовых файлов (скачать прямо из браузера) и журнал всех загрузок
+1. Paste a link → **“Get info”**: thumbnail, author, duration, available resolutions, subtitle availability, status (“new” / “already downloaded”)
+2. Pick quality and language → **“Download”**: live progress bar and console log
+3. Below — the list of ready files (download right from the browser) and the full download log
 
-Хост и порт можно поменять переменными окружения:
+The interface language is chosen with the 🌐 selector in the top-right corner; the choice is remembered in the browser. The download log/console output follows the selected language too.
+
+Host and port can be changed with environment variables:
 
 ```bash
 HOST=0.0.0.0 PORT=8080 python web_server.py
 ```
 
-## Запуск прямо на GitHub
+## Running directly on GitHub
 
-Статический сайт (GitHub Pages) здесь не подойдёт — нужен Python-бэкенд. Поэтому два рабочих варианта.
+A static site (GitHub Pages) won't work here — a Python backend is required. Two working options instead.
 
-### Вариант 1: GitHub Actions (без установки чего-либо)
+### Option 1: GitHub Actions (no local install needed)
 
-В репозитории есть workflow `.github/workflows/download.yml` с ручным запуском:
+The repository includes a manually triggered workflow `.github/workflows/download.yml`:
 
-1. Откройте вкладку **Actions** → **Download YouTube video** → **Run workflow**
-2. Укажите ссылку, качество (`max`/`medium`/`low`/`audio`), язык, нужен ли mp3
-3. Дождитесь завершения → в сводке запуска появится **artifact `youtube-download`** — скачайте zip с файлами
+1. Open the **Actions** tab → **Download YouTube video** → **Run workflow**
+2. Provide the URL, quality (`max`/`medium`/`low`/`audio`), content language, interface language, and whether mp3 is needed
+3. Wait for completion → the run summary shows **artifact `youtube-download`** — download the zip with your files
 
-⚠️ **Ограничения**: артефакт хранится ограниченное время (здесь — 1 день), размер ограничен, и YouTube нередко блокирует запросы с IP дата-центров (ошибка «Sign in to confirm you're not a bot»). Для регулярного использования запускайте локально.
+⚠️ **Limitations**: artifacts are stored for a limited time (1 day here), size is capped, and YouTube often blocks datacenter IPs (the “Sign in to confirm you're not a bot” error). For regular use, run locally.
 
-### Вариант 2: GitHub Codespaces (полноценный веб-интерфейс в облаке)
+### Option 2: GitHub Codespaces (full web UI in the cloud)
 
-1. Кнопка **Code** → вкладка **Codespaces** → **Create codespace on master**
-2. Контейнер настроен через `.devcontainer/devcontainer.json`: Python 3.12, ffmpeg, зависимости — установка запускается автоматически
-3. В терминале: `python web_server.py` — порт 5000 пробрасывается автоматически, браузер с интерфейсом откроется сам
+1. **Code** button → **Codespaces** tab → **Create codespace on master**
+2. The container is configured via `.devcontainer/devcontainer.json`: Python 3.12, ffmpeg, dependencies — installed automatically
+3. In the terminal: `python web_server.py` — port 5000 is forwarded automatically and the browser opens by itself
 
-Расчёт: бесплатная квота Codespaces для личных аккаунтов GitHub — 120 часов ядра в месяц, чего хватает на эпизодическое использование.
+For reference: the free Codespaces quota for personal GitHub accounts is 120 core-hours per month — enough for occasional use.
 
-## Журнал загрузок
+## Download log
 
-При каждом скачивании создаётся/дополняется запись:
+Every download appends an entry:
 
-- `download_log.txt` — машиночитаемый лог (по нему определяется «уже скачано»);
-- `download_log.html` — удобная таблица со ссылками.
+- `download_log.txt` — machine-readable log (used to detect “already downloaded”);
+- `download_log.html` — a human-friendly table with links.
 
-Чтобы перекачать видео заново, удалите его ID из `download_log.txt` (и файл из `downloads/`).
+To re-download a video, remove its ID from `download_log.txt` (and the file from `downloads/`).
 
-## Устранение неполадок
+## Troubleshooting
 
-| Проблема | Решение |
+| Problem | Solution |
 |---|---|
-| Видео качается максимум в 720p | Не найден ffmpeg → склейка DASH недоступна. Установите ffmpeg и проверьте `ffmpeg -version` |
-| «Sign in to confirm you're not a bot» | YouTube блокирует ваш IP (часто на VPN/дата-центрах). Попробуйте другую сеть или запустите локально |
-| mp3 не создаётся, остался `.m4a` | ffmpeg не установлен — конвертация невозможна, сохранён исходный аудиопоток |
-| Транскрипции нет | У видео нет субтитров. Автоматические субтитры YouTube тоже поддерживаются, если они включены |
-| «Address already in use» при старте веб-UI | На macOS порт 5000 часто занят AirPlay (Control Center) — запустите на другом порту: `PORT=8080 python web_server.py` |
-| pytubefix ломается после обновления YouTube | `pip install -U pytubefix` — библиотеку активно патчат под изменения YouTube |
+| Video downloads at 720p max | ffmpeg not found → DASH merging unavailable. Install ffmpeg and check `ffmpeg -version` |
+| “Sign in to confirm you're not a bot” | YouTube blocks your IP (often on VPNs/datacenters). Try another network or run locally |
+| No mp3, a `.m4a` remains | ffmpeg is not installed — conversion impossible, the original audio stream was kept |
+| No transcript | The video has no subtitles. YouTube auto-generated captions are also supported when available |
+| “Address already in use” when starting the Web UI | On macOS port 5000 is often taken by AirPlay (Control Center) — run on another port: `PORT=8080 python web_server.py` |
+| pytubefix breaks after a YouTube update | `pip install -U pytubefix` — the library is actively patched as YouTube changes |
 
-## Лицензия
+## License
 
-[MIT](LICENSE) — свободное использование, копирование, изменение и распространение, включая коммерческое.
+[MIT](LICENSE) — free use, copying, modification and distribution, including commercial use.
 
-⚠️ **Правовое примечание**: программа предназначена для скачивания контента, на который у вас есть права (свой контент, контент с открытой лицензией, либо разрешённое скачивание в вашей юрисдикции). Соблюдайте условия обслуживания YouTube и авторские права.
+⚠️ **Legal note**: this program is intended for downloading content you have the rights to (your own content, openly licensed content, or downloading permitted in your jurisdiction). Respect YouTube's Terms of Service and copyright.

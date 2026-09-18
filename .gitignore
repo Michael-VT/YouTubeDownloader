@@ -1,5 +1,6 @@
 # Личные данные — не публикуем
 downloads/
+download/
 download_log.txt
 download_log.html
 
@@ -11,13 +12,20 @@ venv/
 env/
 *.egg-info/
 
+# Рабочие и временные файлы
+_tmp*
+*.tmp
+*.temp
+*.part
+*.partial
+*.download
+*.log
+~$*
+*.bak
+*.swp
+
 # IDE / OS
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
-
-# Временные файлы загрузчика
-_tmp_v_*
-_tmp_a_*
-_tmp_mp3_*

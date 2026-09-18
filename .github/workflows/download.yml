@@ -20,6 +20,11 @@ on:
       lang:
         description: "Язык аудио/транскрипции"
         default: "ru"
+      ui_lang:
+        description: "Interface language"
+        type: choice
+        default: "en"
+        options: [en, ru, uk, pt, de, fr]
       save_mp3:
         description: "Дополнительно сохранить mp3 рядом с mp4"
         type: boolean
@@ -52,9 +57,10 @@ jobs:
           YDL_URL: ${{ inputs.url }}
           YDL_QUALITY: ${{ inputs.quality }}
           YDL_LANG: ${{ inputs.lang }}
+          YDL_UI_LANG: ${{ inputs.ui_lang }}
           YDL_MP3: ${{ inputs.save_mp3 }}
         run: |
-          ARGS=("$YDL_URL" "$YDL_QUALITY" --lang "$YDL_LANG" -o downloads)
+          ARGS=("$YDL_URL" "$YDL_QUALITY" --lang "$YDL_LANG" --ui-lang "$YDL_UI_LANG" -o downloads)
           if [ "$YDL_MP3" = "true" ]; then ARGS+=(--mp3); fi
           python download.py "${ARGS[@]}"
 

@@ -3,13 +3,14 @@ import sys
 import io
 import threading
 import uuid
-import html as html_module
 
 from flask import Flask, request, jsonify, send_file, Response
 
 # Импортируем логику из download.py (файл должен лежать рядом)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import download as dl  # noqa: E402
+import i18n  # noqa: E402
+from i18n import t  # noqa: E402
 
 app = Flask(__name__)
 
@@ -25,9 +26,24 @@ HTML_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web_ui.htm
 @app.route("/")
 def index():
     if not os.path.exists(HTML_FILE):
-        return Response("web_ui.html не найден рядом с web_server.py", status=500)
+        return Response(t("srv_ui_missing"), status=500)
     with open(HTML_FILE, "r", encoding="utf-8") as f:
         return Response(f.read(), mimetype="text/html; charset=utf-8")
+
+
+# ---------- API: переводы для веб-интерфейса ----------
+
+@app.route("/api/i18n")
+def api_i18n():
+    """Отдаёт все строки web.* на всех языках: {lang: {key: text}}."""
+    from locales import STRINGS
+    out = {}
+    for key, translations in STRINGS.items():
+        if not key.startswith("web_"):
+            continue
+        for lang, text in translations.items():
+            out.setdefault(lang, {})[key] = text
+    return jsonify(out)
 
 
 # ---------- API: информация о видео ----------
@@ -37,7 +53,7 @@ def api_info():
     data = request.get_json(silent=True) or {}
     url = (data.get("url") or "").strip()
     if not url:
-        return jsonify({"error": "URL не указан"}), 400
+        return jsonify({"error": t("srv_url_missing")}), 400
 
     try:
         from pytubefix import YouTube
@@ -80,29 +96,33 @@ def api_download():
     lang = data.get("lang", dl.DEFAULT_LANG)
     save_mp3 = bool(data.get("save_mp3", False))
     output = data.get("output", "downloads")
+    ui_lang = data.get("ui_lang")
 
     if not url:
-        return jsonify({"error": "URL не указан"}), 400
+        return jsonify({"error": t("srv_url_missing")}), 400
     if quality not in ("max", "medium", "low", "audio"):
-        return jsonify({"error": "Неверное качество"}), 400
+        return jsonify({"error": t("srv_bad_quality")}), 400
 
     task_id = uuid.uuid4().hex
     with TASKS_LOCK:
         TASKS[task_id] = {
             "status": "running",
             "percent": 5,
-            "message": "Запуск…",
+            "message": t("srv_task_starting"),
             "log": "",
             "stage": "init",
         }
 
     def run_task():
-        # Перехватываем stdout download_video, чтобы отдавать лог в UI
+        # Перехватываем stdout download_video, чтобы отдавать лог в UI.
+        # Язык интерфейса — thread-local, поэтому задача не влияет на другие
+        # запросы и сама не зависит от них.
         buf = io.StringIO()
         old_stdout = sys.stdout
         sys.stdout = buf
+        i18n.set_language(ui_lang)
 
-        def updater(stage, percent=None, message=None):
+        def update(percent=None, message=None):
             with TASKS_LOCK:
                 if task_id not in TASKS:
                     return
@@ -111,43 +131,19 @@ def api_download():
                     TASKS[task_id]["message"] = message
                 if percent is not None:
                     TASKS[task_id]["percent"] = percent
-                TASKS[task_id]["stage"] = stage
+
+        def progress(percent, message):
+            update(percent=percent, message=message)
 
         try:
-            # Скачивание (внутри download_video печатает в stdout)
-            # Обновляем прогресс по ходу через простой таймер-наблюдатель
-            import threading as _t
-
-            def watcher():
-                # простой анализатор stdout на предмет ключевых фраз
-                mapping = [
-                    ("Получение", 10), ("Название:", 15),
-                    ("Выбрано качество", 20), ("Скачивание видеопотока", 30),
-                    ("Скачивание аудиопотока", 50), ("Склейка", 65),
-                    ("Видео сохранено", 80), ("Транскрипция", 90),
-                    ("mp3 сохранён", 95), ("Запись добавлена", 100),
-                ]
-                seen = set()
-                while True:
-                    with TASKS_LOCK:
-                        if task_id not in TASKS or TASKS[task_id]["status"] != "running":
-                            return
-                    text = buf.getvalue()
-                    for key, pct in mapping:
-                        if key in text and key not in seen:
-                            seen.add(key)
-                            updater("progress", pct, key)
-                    _t.Event().wait(0.5)
-
-            threading.Thread(target=watcher, daemon=True).start()
-
             dl.download_video(url, quality, output_path=output,
-                              lang=lang, save_mp3=save_mp3)
+                              lang=lang, save_mp3=save_mp3,
+                              progress=progress)
 
             with TASKS_LOCK:
                 TASKS[task_id]["status"] = "done"
                 TASKS[task_id]["percent"] = 100
-                TASKS[task_id]["message"] = "Готово"
+                TASKS[task_id]["message"] = t("srv_task_done")
                 TASKS[task_id]["log"] = buf.getvalue()
         except Exception as e:
             with TASKS_LOCK:
@@ -167,8 +163,8 @@ def api_download():
 def api_status(task_id):
     with TASKS_LOCK:
         task = TASKS.get(task_id)
-        if not task:
-            return jsonify({"error": "Задача не найдена"}), 404
+        if task is None:
+            return jsonify({"error": "Unknown task"}), 404
         return jsonify(task)
 
 
@@ -185,13 +181,12 @@ def api_log():
 @app.route("/api/files")
 def api_files():
     out_dir = "downloads"
-    if not os.path.isdir(out_dir):
-        return jsonify([])
     files = []
-    for name in sorted(os.listdir(out_dir)):
-        path = os.path.join(out_dir, name)
-        if os.path.isfile(path):
-            files.append({"name": name, "size": os.path.getsize(path)})
+    if os.path.isdir(out_dir):
+        for name in sorted(os.listdir(out_dir)):
+            path = os.path.join(out_dir, name)
+            if os.path.isfile(path):
+                files.append({"name": name, "size": os.path.getsize(path)})
     return jsonify(files)
 
 
@@ -199,8 +194,10 @@ def api_files():
 def api_get_file(filename):
     out_dir = os.path.abspath("downloads")
     target = os.path.abspath(os.path.join(out_dir, filename))
-    if not target.startswith(out_dir + os.sep) or not os.path.isfile(target):
-        return "Not found", 404
+    if not target.startswith(out_dir):
+        return Response("Forbidden", status=403)
+    if not os.path.isfile(target):
+        return Response("Not found", status=404)
     return send_file(target, as_attachment=True)
 
 
@@ -209,5 +206,6 @@ def api_get_file(filename):
 if __name__ == "__main__":
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "5000"))
-    print(f"\n🌐 Открой в браузере: http://{host}:{port}\n")
+    i18n.set_language(i18n.detect_language())
+    print("\n" + t("srv_open_browser", url=f"http://{host}:{port}") + "\n")
     app.run(host=host, port=port, debug=False, threaded=True)
