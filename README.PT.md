@@ -142,7 +142,7 @@ O repositório inclui um workflow acionado manualmente, `.github/workflows/downl
 2. Forneça a URL, a qualidade (`max`/`medium`/`low`/`audio`), o idioma do conteúdo, o idioma da interface e se o mp3 é necessário
 3. Aguarde a conclusão → o resumo da execução mostra o **artifact `youtube-download`** — baixe o zip com seus arquivos
 
-Dica: o formulário de execução tem um endereço permanente — `https://github.com/SEU_LOGIN/SEU_REPOSITORIO/actions/workflows/download.yml` (adicione aos favoritos). Marque **publish** no formulário para anexar os arquivos a um **Release** do GitHub — uma página permanente com links diretos de download (veja *Releases* no repositório, ou o link no resumo da execução). Essa é a maneira correta de manter os arquivos “dentro do repositório”: fazer commit de vídeos no histórico do git o incha (e o GitHub bloqueia arquivos acima de 100 MB).
+Nada é armazenado no repositório: a execução entrega apenas o próprio arquivo de mídia (mp4/mp3) como um artifact de curta duração (1 dia). Baixe o zip no resumo da execução; para transcrições e logs, execute a ferramenta localmente.
 
 ⚠️ **Limitações**: os artifacts ficam armazenados por tempo limitado (1 dia aqui), o tamanho é limitado, e o YouTube costuma bloquear IPs de datacenters (o erro “Sign in to confirm you're not a bot”). Para uso regular, execute localmente.
 
