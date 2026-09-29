@@ -7,7 +7,7 @@ Baixa **vídeo (mp4)**, **áudio (mp3)** e **transcrições de texto** (a partir
 - **CLI** — `download.py`, uma ferramenta de console escrita em Python;
 - **Web UI** — `web_server.py` (Flask) + `web_ui.html` (JS no navegador): barra de progresso, registro de downloads, lista de arquivos com links para download.
 
-![YouTube Downloader](Screeshot/YouTubDownloader.png)
+![YouTube Downloader](Screeshot/YouTubDownloaderV3.png)
 
 Idiomas da interface: **English, Русский, Українська, Português, Deutsch, Français**.
 

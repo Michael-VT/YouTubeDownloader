@@ -7,7 +7,7 @@
 - **CLI** — `download.py`, консольный инструмент на Python;
 - **Веб-интерфейс** — `web_server.py` (Flask) + `web_ui.html` (JS в браузере): прогресс-бар, журнал загрузок, список файлов со ссылками на скачивание.
 
-![YouTube Downloader](Screeshot/YouTubDownloader.png)
+![YouTube Downloader](Screeshot/YouTubDownloaderV3.png)
 
 Языки интерфейса: **English, Русский, Українська, Português, Deutsch, Français**.
 
