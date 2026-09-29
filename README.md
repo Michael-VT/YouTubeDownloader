@@ -13,6 +13,25 @@ Interface languages: **English, Русский, Українська, Português
 
 License: **MIT** — free to use without restrictions (see [LICENSE](LICENSE)).
 
+## Quick start
+
+```bash
+git clone https://github.com/YOUR_LOGIN/YOUR_REPOSITORY.git
+cd YOUR_REPOSITORY
+
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# option 1 — console: best-quality video + transcript
+python download.py "https://youtu.be/XXXX" max
+
+# option 2 — web interface: http://127.0.0.1:8080
+python web_server.py
+```
+
+**ffmpeg** is needed for 1080p+ and mp3 conversion (see the Installation section below). Everything you download and every working file (`downloads/`, logs, the waiting queue) stays on your machine — none of it ever gets into the repository (see Settings).
+
 ## Features
 
 - 🎥 Video at maximum quality (1080p / 1440p / 4K via DASH streams merged with ffmpeg), medium or low
@@ -25,6 +44,8 @@ License: **MIT** — free to use without restrictions (see [LICENSE](LICENSE)).
 - 🖥️ Web UI: video info before downloading, live progress, history, file downloads straight from the browser
 - 🌐 Interface language switchable in both CLI and Web UI (6 languages, auto-detected by default)
 
+See [CHANGELOG.md](CHANGELOG.md) for what's new in this version.
+
 ## Repository structure
 
 ```
@@ -34,6 +55,7 @@ License: **MIT** — free to use without restrictions (see [LICENSE](LICENSE)).
 ├── i18n.py                # Interface language engine
 ├── locales/               # Translations: en, ru, uk, pt, de, fr
 ├── requirements.txt       # Python dependencies
+├── CHANGELOG.md           # What's new in each version
 ├── Screeshot/             # Screenshot used in the READMEs
 ├── .github/workflows/     # GitHub Actions: download without a local install
 ├── .devcontainer/         # GitHub Codespaces setup
@@ -145,6 +167,26 @@ Host and port can be changed with environment variables:
 ```bash
 HOST=0.0.0.0 PORT=8080 python web_server.py
 ```
+
+## Settings
+
+Environment variables:
+
+| Variable | Meaning |
+|---|---|
+| `HOST`, `PORT` | Web UI address (default `127.0.0.1:8080`) |
+| `YTD_LANG` | interface language: `en`/`ru`/`uk`/`pt`/`de`/`fr` (overrides auto-detection) |
+
+All CLI options: `python download.py --help` — quality (`max`/`medium`/`low`/`audio`/`text`), mp3 bitrate, audio/transcript language, output folder, interface language, waiting-queue commands.
+
+Files created during operation — all excluded from git via `.gitignore`, they never leave your machine:
+
+| File / folder | Purpose |
+|---|---|
+| `downloads/` | downloaded media and transcripts (change with `-o`/`--output`) |
+| `download_log.txt`, `download_log.html` | download journal: duplicate protection + human-readable table |
+| `pending_queue.json` | waiting queue of unavailable videos |
+| `_tmp_*` | temporary stream files, removed after merging/conversion |
 
 ## Running directly on GitHub
 

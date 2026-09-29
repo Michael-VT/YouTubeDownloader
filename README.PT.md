@@ -13,6 +13,25 @@ Idiomas da interface: **English, Русский, Українська, Portuguê
 
 Licença: **MIT** — uso livre sem restrições (consulte a [LICENSE](LICENSE)).
 
+## Início rápido
+
+```bash
+git clone https://github.com/YOUR_LOGIN/YOUR_REPOSITORY.git
+cd YOUR_REPOSITORY
+
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# opção 1 — console: vídeo na melhor qualidade + transcrição
+python download.py "https://youtu.be/XXXX" max
+
+# opção 2 — interface web: http://127.0.0.1:8080
+python web_server.py
+```
+
+O **ffmpeg** é necessário para 1080p+ e a conversão em mp3 (veja a seção Instalação abaixo). Tudo o que você baixa e todos os arquivos de trabalho (`downloads/`, registros, a fila de espera) ficam somente na sua máquina — nada disso entra no repositório (veja Configurações).
+
 ## Funcionalidades
 
 - 🎥 Vídeo na qualidade máxima (1080p / 1440p / 4K via fluxos DASH mesclados com ffmpeg), média ou baixa
@@ -25,6 +44,8 @@ Licença: **MIT** — uso livre sem restrições (consulte a [LICENSE](LICENSE))
 - 🖥️ Web UI: informações do vídeo antes do download, progresso ao vivo, histórico e download de arquivos direto do navegador
 - 🌐 Idioma da interface alternável tanto na CLI quanto na Web UI (6 idiomas, detecção automática por padrão)
 
+Veja o [CHANGELOG.md](CHANGELOG.md) para as novidades desta versão.
+
 ## Estrutura do repositório
 
 ```
@@ -34,6 +55,7 @@ Licença: **MIT** — uso livre sem restrições (consulte a [LICENSE](LICENSE))
 ├── i18n.py                # Motor de idioma da interface
 ├── locales/               # Traduções: en, ru, uk, pt, de, fr
 ├── requirements.txt       # Dependências Python
+├── CHANGELOG.md           # Novidades de cada versão
 ├── Screeshot/             # Captura de tela usada nos READMEs
 ├── .github/workflows/     # GitHub Actions: download sem instalação local
 ├── .devcontainer/         # Configuração do GitHub Codespaces
@@ -145,6 +167,26 @@ Host e porta podem ser alterados com variáveis de ambiente:
 ```bash
 HOST=0.0.0.0 PORT=8080 python web_server.py
 ```
+
+## Configurações
+
+Variáveis de ambiente:
+
+| Variável | Significado |
+|---|---|
+| `HOST`, `PORT` | endereço da Web UI (padrão `127.0.0.1:8080`) |
+| `YTD_LANG` | idioma da interface: `en`/`ru`/`uk`/`pt`/`de`/`fr` (substitui a detecção automática) |
+
+Todas as opções da CLI: `python download.py --help` — qualidade (`max`/`medium`/`low`/`audio`/`text`), bitrate mp3, idioma do áudio/transcrição, pasta de saída, idioma da interface, comandos da fila de espera.
+
+Arquivos criados durante a operação — todos excluídos do git via `.gitignore`, nunca saem da sua máquina:
+
+| Arquivo / pasta | Finalidade |
+|---|---|
+| `downloads/` | mídias e transcrições baixadas (mude com `-o`/`--output`) |
+| `download_log.txt`, `download_log.html` | registro de downloads: proteção contra duplicatas + tabela legível |
+| `pending_queue.json` | fila de espera de vídeos indisponíveis |
+| `_tmp_*` | arquivos temporários de fluxo, removidos após mesclagem/conversão |
 
 ## Executando direto no GitHub
 

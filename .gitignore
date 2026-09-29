@@ -5,6 +5,13 @@ download_log.txt
 download_log.html
 pending_queue.json
 
+# Медиа и транскрипции — на случай запуска с -o . или произвольной папкой
+*.mp4
+*.m4a
+*.webm
+*.mp3
+*.transcript.txt
+
 # Python
 __pycache__/
 *.py[cod]
