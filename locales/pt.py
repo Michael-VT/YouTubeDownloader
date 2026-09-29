@@ -120,6 +120,7 @@ SEM ARGUMENTOS, a ferramenta entra no modo interativo e pergunta passo a passo."
 
     # ---------- Result ----------
     "ok_video_saved": "✅ Vídeo salvo: {path}",
+    "info_file_exists": "ℹ️  “{old}” já existe — salvando como “{new}” (o arquivo antigo é preservado).",
     "err_download": "❌ Erro no download: {error}",
     "ok_log_entry": "📝 Entrada adicionada a {txt} e {html}",
 

@@ -146,6 +146,7 @@ Video title.mp4                  # video (or .mp3 in audio mode)
 Video title.mp3                  # with --mp3 or quality=audio
 Video title [320k].mp3           # audio at a non-default bitrate
 Video title.transcript.txt       # transcript from subtitles
+Video title [1080p].mp4         # the same video at another quality — old files are never touched
 ```
 
 ## Usage: Web UI
@@ -220,6 +221,8 @@ Every download appends an entry:
 - `download_log.html` — a human-friendly table with links.
 
 Duplicates are tracked per type and quality: the same video can be downloaded at several resolutions, several mp3 bitrates and as text. To re-download the exact same item, remove its line from `download_log.txt` — or simply delete the file from `downloads/`: entries whose file no longer exists are re-downloadable.
+
+Existing files are never deleted or overwritten: the same video at another quality or bitrate is saved as a new file next to the old one (`Video title [1080p].mp4`, `Video title [320k].mp3`). To replace a file, delete it from `downloads/` yourself.
 
 ## Troubleshooting
 

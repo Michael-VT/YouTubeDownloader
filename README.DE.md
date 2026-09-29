@@ -146,6 +146,7 @@ Videotitel.mp4                  # Video (bzw. .mp3 im Audio-Modus)
 Videotitel.mp3                  # mit --mp3 oder quality=audio
 Videotitel [320k].mp3           # Audio mit nicht standardmäßiger Bitrate
 Videotitel.transcript.txt       # Transkript aus Untertiteln
+Videotitel [1080p].mp4         # dasselbe Video in anderer Qualität — alte Dateien werden nie angetastet
 ```
 
 ## Verwendung: Web-UI
@@ -220,6 +221,8 @@ Jeder Download hängt einen Eintrag an:
 - `download_log.html` — eine gut lesbare Tabelle mit Links.
 
 Duplikate werden nach Typ und Qualität verfolgt: dasselbe Video kann in mehreren Auflösungen, mehreren mp3-Bitraten und als Text geladen werden. Um genau dasselbe Element erneut zu laden, entfernen Sie seine Zeile aus `download_log.txt` — oder löschen Sie einfach die Datei aus `downloads/`: Einträge ohne Datei auf der Festplatte sind erneut ladbar.
+
+Vorhandene Dateien werden niemals gelöscht oder überschrieben: dasselbe Video in anderer Qualität oder Bitrate wird als neue Datei neben der alten gespeichert (`Videotitel [1080p].mp4`, `Videotitel [320k].mp3`). Um eine Datei zu ersetzen, löschen Sie sie selbst aus `downloads/`.
 
 ## Fehlerbehebung
 

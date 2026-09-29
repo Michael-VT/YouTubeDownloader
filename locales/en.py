@@ -120,6 +120,7 @@ WITHOUT ARGUMENTS the tool runs in interactive mode and asks step by step.""",
 
     # ---------- Result ----------
     "ok_video_saved": "✅ Video saved: {path}",
+    "info_file_exists": "ℹ️  “{old}” already exists — saving as “{new}” (the old file is kept).",
     "err_download": "❌ Download error: {error}",
     "ok_log_entry": "📝 Entry added to {txt} and {html}",
 

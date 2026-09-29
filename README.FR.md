@@ -146,6 +146,7 @@ Titre de la vidéo.mp4            # vidéo (ou .mp3 en mode audio)
 Titre de la vidéo.mp3            # avec --mp3 ou quality=audio
 Titre de la vidéo [320k].mp3     # audio avec un débit non standard
 Titre de la vidéo.transcript.txt # transcription des sous-titres
+Titre de la vidéo [1080p].mp4   # la même vidéo dans une autre qualité — les anciens fichiers ne sont jamais modifiés
 ```
 
 ## Utilisation : interface Web
@@ -220,6 +221,8 @@ Chaque téléchargement ajoute une entrée :
 - `download_log.html` — un tableau lisible avec des liens.
 
 Les doublons sont suivis par type et qualité : une même vidéo peut être téléchargée en plusieurs résolutions, plusieurs débits mp3 et en texte. Pour retélécharger le même élément, supprimez sa ligne de `download_log.txt` — ou supprimez simplement le fichier de `downloads/` : les entrées sans fichier sur le disque sont retéléchargeables.
+
+Les fichiers existants ne sont jamais supprimés ni écrasés : la même vidéo dans une autre qualité ou un autre débit est enregistrée dans un nouveau fichier à côté de l'ancien (`Titre de la vidéo [1080p].mp4`, `Titre de la vidéo [320k].mp3`). Pour remplacer un fichier, supprimez-le vous-même de `downloads/`.
 
 ## Dépannage
 

@@ -280,6 +280,38 @@ def _mp3_filename(title: str, bitrate: str = DEFAULT_BITRATE) -> str:
     suffix = f" [{bitrate}]" if bitrate != DEFAULT_BITRATE else ""
     return safe_filename(title) + suffix + ".mp3"
 
+
+def _unique_path(path: str, marker: str) -> str:
+    """
+    Существующие скачивания никогда не затираются: если путь занят,
+    новый файл сохраняется рядом — с пометкой качества в имени
+    («Название [1080p].mp4») либо с номером, если и оно занято.
+    """
+    if not os.path.exists(path):
+        return path
+    base, ext = os.path.splitext(path)
+    tagged = marker and f"[{marker}]" not in os.path.basename(base)
+    candidates = ([f"{base} [{marker}]{ext}"] if tagged else []) + \
+                 [f"{base} {n}{ext}" for n in range(2, 100)]
+    for candidate in candidates:
+        if not os.path.exists(candidate):
+            print(t("info_file_exists", old=os.path.basename(path),
+                    new=os.path.basename(candidate)))
+            return candidate
+    return path
+
+
+def _video_path(output_path: str, title: str, resolution, ext: str = "mp4") -> str:
+    """Путь видеофайла; старые файлы не перезаписываются."""
+    path = os.path.join(output_path, safe_filename(title) + "." + ext)
+    return _unique_path(path, resolution or "video")
+
+
+def _mp3_path(output_path: str, title: str, bitrate: str) -> str:
+    """Путь mp3; старые файлы не перезаписываются."""
+    path = os.path.join(output_path, _mp3_filename(title, bitrate))
+    return _unique_path(path, bitrate)
+
 def _res_key(s):
     """Ключ сортировки потоков по разрешению ('720p' -> 720)."""
     return int(s.resolution.replace("p", "")) if s.resolution else 0
@@ -385,7 +417,8 @@ def download_transcript(yt, output_dir: str, preferred_lang: str = DEFAULT_LANG,
     print(t("info_transcript_lang", code=chosen.code))
 
     base_name = safe_filename(yt.title)
-    transcript_path = os.path.join(output_dir, f"{base_name}.transcript.txt")
+    transcript_path = _unique_path(
+        os.path.join(output_dir, f"{base_name}.transcript.txt"), chosen.code)
 
     try:
         srt_text = chosen.generate_srt_captions()
@@ -509,8 +542,7 @@ def download_audio_only(yt, output_path, preferred_lang, as_mp3=True,
     print(t("downloaded", path=tmp_path))
 
     if as_mp3 and check_ffmpeg():
-        final_name = _mp3_filename(yt.title, bitrate)
-        final_path = os.path.join(output_path, final_name)
+        final_path = _mp3_path(output_path, yt.title, bitrate)
         print(t("converting_mp3"))
         _report(progress, 55, "converting_mp3")
         if convert_to_mp3(tmp_path, final_path, bitrate=bitrate):
@@ -829,8 +861,7 @@ def download_video(url, quality, output_path="downloads",
                     print(t("err_tmp_corrupt", path=p))
                     return False
 
-            final_name = safe_filename(yt.title) + ".mp4"
-            final_path = os.path.join(output_path, final_name)
+            final_path = _video_path(output_path, yt.title, selected_video.resolution)
 
             print(t("merging"))
             _report(progress, 65, "merging")
@@ -851,7 +882,10 @@ def download_video(url, quality, output_path="downloads",
                 if fallback_stream is None:
                     print(t("err_no_video_stream"))
                     return False
-                filepath = fallback_stream.download(output_path=output_path)
+                fb_path = _video_path(output_path, yt.title, fallback_stream.resolution,
+                                      fallback_stream.subtype)
+                filepath = fallback_stream.download(output_path=output_path,
+                                                    filename=os.path.basename(fb_path))
                 selected_video = fallback_stream
                 audio_lang_name = t("audio_lang_embedded")
                 print(t("ok_saved_fallback", path=filepath))
@@ -866,7 +900,10 @@ def download_video(url, quality, output_path="downloads",
                 _report(progress, 80, "ok_video_saved", path=filepath)
         else:
             _report(progress, 30, "dl_video_stream")
-            filepath = selected_video.download(output_path=output_path)
+            v_path = _video_path(output_path, yt.title, selected_video.resolution,
+                                 selected_video.subtype)
+            filepath = selected_video.download(output_path=output_path,
+                                               filename=os.path.basename(v_path))
             print()
             print(t("ok_video_saved", path=filepath))
             _report(progress, 80, "ok_video_saved", path=filepath)
@@ -896,7 +933,7 @@ def download_video(url, quality, output_path="downloads",
         if audio_stream is not None:
             tmp_a_name = f"_tmp_mp3_{yt.video_id}.{audio_stream.subtype}"
             tmp_a = audio_stream.download(output_path=output_path, filename=tmp_a_name)
-            mp3_path = os.path.join(output_path, _mp3_filename(yt.title, abitrate))
+            mp3_path = _mp3_path(output_path, yt.title, abitrate)
             if check_ffmpeg() and convert_to_mp3(tmp_a, mp3_path, bitrate=abitrate):
                 if os.path.exists(tmp_a):
                     os.remove(tmp_a)

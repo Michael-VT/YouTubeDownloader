@@ -120,6 +120,7 @@ STRINGS = {
 
     # ---------- Result ----------
     "ok_video_saved": "✅ Видео сохранено: {path}",
+    "info_file_exists": "ℹ️  «{old}» уже существует — сохраняю как «{new}» (старый файл не тронут).",
     "err_download": "❌ Ошибка при скачивании: {error}",
     "ok_log_entry": "📝 Запись добавлена в {txt} и {html}",
 

@@ -120,6 +120,7 @@ SANS ARGUMENT, l'outil démarre en mode interactif et pose les questions étape 
 
     # ---------- Result ----------
     "ok_video_saved": "✅ Vidéo enregistrée : {path}",
+    "info_file_exists": "ℹ️  « {old} » existe déjà — enregistrement sous « {new} » (l'ancien fichier est conservé).",
     "err_download": "❌ Erreur de téléchargement : {error}",
     "ok_log_entry": "📝 Entrée ajoutée à {txt} et {html}",
 

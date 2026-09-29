@@ -120,6 +120,7 @@ OHNE ARGUMENTE läuft das Tool im interaktiven Modus und fragt Schritt für Schr
 
     # ---------- Result ----------
     "ok_video_saved": "✅ Video gespeichert: {path}",
+    "info_file_exists": "ℹ️  „{old}“ existiert bereits — wird als „{new}“ gespeichert (die alte Datei bleibt erhalten).",
     "err_download": "❌ Downloadfehler: {error}",
     "ok_log_entry": "📝 Eintrag zu {txt} und {html} hinzugefügt",
 

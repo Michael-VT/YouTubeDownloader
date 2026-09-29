@@ -46,6 +46,15 @@ bitrates never overwrite each other.
 - the info badge lists exactly what is already downloaded;
 - failed downloads are marked as an error instead of “done”.
 
+### Never overwrite existing downloads
+
+Downloading the same video at another quality or bitrate never touches the
+old files: if the target name is already taken, the new download is saved
+next to it with a quality tag (`Title [1080p].mp4`, `Title [192k].mp3`).
+Previously a DASH merge silently overwrote `Title.mp4` regardless of quality,
+and a progressive re-download skipped fetching but logged the new resolution
+against the old file.
+
 ### Fixes
 
 - default web-server port changed **5000 → 8080**: on macOS, AirPlay Receiver
