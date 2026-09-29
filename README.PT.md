@@ -132,7 +132,7 @@ Video title.transcript.txt       # transcrição a partir das legendas
 python web_server.py
 ```
 
-Abra **http://127.0.0.1:5000** no seu navegador:
+Abra **http://127.0.0.1:8080** no seu navegador:
 
 1. Cole um link → **“Obter informações”**: miniatura, autor, duração, resoluções disponíveis, disponibilidade de legendas, status (“novo”, ou exatamente o que já foi baixado: vídeo 1080p, mp3, transcrição)
 2. Escolha qualidade, idioma e bitrate mp3 → **“Baixar”**: barra de progresso ao vivo e registro no console
@@ -166,7 +166,7 @@ Nada é armazenado no repositório: a execução entrega apenas o próprio arqui
 
 1. Botão **Code** → aba **Codespaces** → **Create codespace on master**
 2. O contêiner é configurado via `.devcontainer/devcontainer.json`: Python 3.12, ffmpeg, dependências — instalados automaticamente
-3. No terminal: `python web_server.py` — a porta 5000 é encaminhada automaticamente e o navegador abre sozinho
+3. No terminal: `python web_server.py` — a porta 8080 é encaminhada automaticamente e o navegador abre sozinho
 
 Para referência: a cota gratuita do Codespaces para contas pessoais do GitHub é de 120 core-hours por mês — suficiente para uso ocasional.
 
@@ -187,7 +187,7 @@ Duplicatas são controladas por tipo e qualidade: o mesmo vídeo pode ser baixad
 | “Sign in to confirm you're not a bot” | O YouTube bloqueia seu IP (comum em VPNs/datacenters). Tente outra rede ou execute localmente |
 | Sem mp3, resta um `.m4a` | ffmpeg não está instalado — conversão impossível, o fluxo de áudio original foi mantido |
 | Sem transcrição | O vídeo não tem legendas. Legendas geradas automaticamente pelo YouTube também são suportadas, quando disponíveis |
-| “Address already in use” ao iniciar a Web UI | No macOS a porta 5000 costuma ser ocupada pelo AirPlay (Control Center) — use outra porta: `PORT=8080 python web_server.py` |
+| “Access denied” (403) ou “Address already in use” na porta 5000 | O AirPlay do macOS (Central de Controle) intercepta a porta 5000, por isso o servidor web usa 8080 por padrão. Se precisar da 5000, desative o AirPlay Receiver (Ajustes do Sistema → Geral → AirDrop e Handoff) ou defina outra `PORT` |
 | pytubefix para de funcionar após uma atualização do YouTube | `pip install -U pytubefix` — a biblioteca é corrigida ativamente conforme o YouTube muda |
 | Vídeo indisponível (privado/removido) | É colocado na fila de espera automaticamente — execute com `--check-queue` ou `--watch` (ou clique em “Verificar agora” na Web UI) e ele será baixado assim que ficar disponível |
 

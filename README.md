@@ -132,7 +132,7 @@ Video title.transcript.txt       # transcript from subtitles
 python web_server.py
 ```
 
-Open **http://127.0.0.1:5000** in your browser:
+Open **http://127.0.0.1:8080** in your browser:
 
 1. Paste a link → **“Get info”**: thumbnail, author, duration, available resolutions, subtitle availability, status (“new”, or exactly what is already downloaded: video 1080p, mp3, transcript)
 2. Pick quality, language and mp3 bitrate → **“Download”**: live progress bar and console log
@@ -166,7 +166,7 @@ Nothing is stored in the repository: the run delivers only the media file itself
 
 1. **Code** button → **Codespaces** tab → **Create codespace on master**
 2. The container is configured via `.devcontainer/devcontainer.json`: Python 3.12, ffmpeg, dependencies — installed automatically
-3. In the terminal: `python web_server.py` — port 5000 is forwarded automatically and the browser opens by itself
+3. In the terminal: `python web_server.py` — port 8080 is forwarded automatically and the browser opens by itself
 
 For reference: the free Codespaces quota for personal GitHub accounts is 120 core-hours per month — enough for occasional use.
 
@@ -187,7 +187,7 @@ Duplicates are tracked per type and quality: the same video can be downloaded at
 | “Sign in to confirm you're not a bot” | YouTube blocks your IP (often on VPNs/datacenters). Try another network or run locally |
 | No mp3, a `.m4a` remains | ffmpeg is not installed — conversion impossible, the original audio stream was kept |
 | No transcript | The video has no subtitles. YouTube auto-generated captions are also supported when available |
-| “Address already in use” when starting the Web UI | On macOS port 5000 is often taken by AirPlay (Control Center) — run on another port: `PORT=8080 python web_server.py` |
+| “Access denied” (403) or “Address already in use” on port 5000 | macOS AirPlay (Control Center) intercepts port 5000, so the web server defaults to 8080. If you need 5000 specifically, disable AirPlay Receiver (System Settings → General → AirDrop & Handoff) or set another `PORT` |
 | pytubefix breaks after a YouTube update | `pip install -U pytubefix` — the library is actively patched as YouTube changes |
 | Video unavailable (private/removed) | It is placed in the waiting queue automatically — run with `--check-queue` or `--watch` (or press “Check now” in the Web UI) and it downloads once it becomes available |
 

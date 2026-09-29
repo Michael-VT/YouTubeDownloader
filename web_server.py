@@ -246,7 +246,7 @@ def api_get_file(filename):
 
 if __name__ == "__main__":
     host = os.environ.get("HOST", "127.0.0.1")
-    port = int(os.environ.get("PORT", "5000"))
+    port = int(os.environ.get("PORT", "8080"))
     i18n.set_language(i18n.detect_language())
     print("\n" + t("srv_open_browser", url=f"http://{host}:{port}") + "\n")
     app.run(host=host, port=port, debug=False, threaded=True)

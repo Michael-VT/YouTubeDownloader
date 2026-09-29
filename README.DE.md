@@ -132,7 +132,7 @@ Videotitel.transcript.txt       # Transkript aus Untertiteln
 python web_server.py
 ```
 
-Öffnen Sie **http://127.0.0.1:5000** im Browser:
+Öffnen Sie **http://127.0.0.1:8080** im Browser:
 
 1. Link einfügen → **„Infos abrufen“**: Vorschaubild, Autor, Dauer, verfügbare Auflösungen, Untertitel-Verfügbarkeit, Status („neu“ oder genau das bereits Geladene: Video 1080p, mp3, Transkription)
 2. Qualität, Sprache und mp3-Bitrate wählen → **„Herunterladen“**: Live-Fortschrittsbalken und Konsolen-Protokoll
@@ -166,7 +166,7 @@ Im Repository wird nichts gespeichert: Der Lauf liefert nur die Mediendatei selb
 
 1. Schaltfläche **Code** → Tab **Codespaces** → **Create codespace on master**
 2. Der Container ist über `.devcontainer/devcontainer.json` konfiguriert: Python 3.12, ffmpeg, Abhängigkeiten — alles wird automatisch installiert
-3. Im Terminal: `python web_server.py` — Port 5000 wird automatisch weitergeleitet und der Browser öffnet sich von selbst
+3. Im Terminal: `python web_server.py` — Port 8080 wird automatisch weitergeleitet und der Browser öffnet sich von selbst
 
 Zur Orientierung: Das kostenlose Codespaces-Kontingent für persönliche GitHub-Konten beträgt 120 Core-Stunden pro Monat — genug für gelegentliche Nutzung.
 
@@ -187,7 +187,7 @@ Duplikate werden nach Typ und Qualität verfolgt: dasselbe Video kann in mehrere
 | „Sign in to confirm you're not a bot“ | YouTube blockiert Ihre IP (häufig bei VPNs/Rechenzentren). Anderes Netzwerk versuchen oder lokal ausführen |
 | Kein mp3, eine `.m4a` bleibt übrig | ffmpeg ist nicht installiert — eine Konvertierung ist unmöglich, der ursprüngliche Audiostream wurde behalten |
 | Kein Transkript | Das Video hat keine Untertitel. Automatisch von YouTube erzeugte Untertitel werden ebenfalls unterstützt, sofern vorhanden |
-| „Address already in use“ beim Starten der Web-UI | Unter macOS ist Port 5000 oft durch AirPlay (Kontrollzentrum) belegt — anderen Port verwenden: `PORT=8080 python web_server.py` |
+| „Access denied“ (403) oder „Address already in use“ auf Port 5000 | macOS AirPlay (Kontrollzentrum) fängt Port 5000 ab, daher lauscht der Webserver standardmäßig auf 8080. Falls Port 5000 nötig ist: AirPlay-Empfänger deaktivieren (Systemeinstellungen → Allgemein → AirDrop & Handoff) oder ein anderes `PORT` setzen |
 | pytubefix funktioniert nach einem YouTube-Update nicht mehr | `pip install -U pytubefix` — die Bibliothek wird aktiv gepatcht, wenn sich YouTube ändert |
 | Video nicht verfügbar (privat/entfernt) | Es wird automatisch in die Warteschlange gestellt — mit `--check-queue` oder `--watch` ausführen (oder in der Web-UI „Jetzt prüfen“ klicken), dann lädt es sich, sobald es verfügbar ist |
 

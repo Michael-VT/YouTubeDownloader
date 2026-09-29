@@ -132,7 +132,7 @@ Titre de la vidéo.transcript.txt # transcription des sous-titres
 python web_server.py
 ```
 
-Ouvrez **http://127.0.0.1:5000** dans votre navigateur :
+Ouvrez **http://127.0.0.1:8080** dans votre navigateur :
 
 1. Collez un lien → **« Obtenir les infos »** : miniature, auteur, durée, résolutions disponibles, présence de sous-titres, statut (« nouveau », ou exactement ce qui est déjà téléchargé : vidéo 1080p, mp3, transcription)
 2. Choisissez la qualité, la langue et le débit mp3 → **« Télécharger »** : barre de progression en direct et journal console
@@ -166,7 +166,7 @@ Rien n'est stocké dans le dépôt : l'exécution livre uniquement le fichier m�
 
 1. Bouton **Code** → onglet **Codespaces** → **Create codespace on master**
 2. Le conteneur est configuré via `.devcontainer/devcontainer.json` : Python 3.12, ffmpeg, dépendances — installés automatiquement
-3. Dans le terminal : `python web_server.py` — le port 5000 est transféré automatiquement et le navigateur s'ouvre tout seul
+3. Dans le terminal : `python web_server.py` — le port 8080 est transféré automatiquement et le navigateur s'ouvre tout seul
 
 Pour info : le quota gratuit de Codespaces pour les comptes GitHub personnels est de 120 heures-cœur par mois — largement suffisant pour un usage occasionnel.
 
@@ -187,7 +187,7 @@ Les doublons sont suivis par type et qualité : une même vidéo peut être tél
 | « Sign in to confirm you're not a bot » | YouTube bloque votre IP (souvent avec les VPN/datacenters). Essayez un autre réseau ou exécutez localement |
 | Pas de mp3, un `.m4a` subsiste | ffmpeg n'est pas installé — conversion impossible, le flux audio d'origine a été conservé |
 | Pas de transcription | La vidéo n'a pas de sous-titres. Les sous-titres auto-générés par YouTube sont également pris en charge quand ils existent |
-| « Address already in use » au démarrage de l'interface Web | Sur macOS, le port 5000 est souvent occupé par AirPlay (Centre de contrôle) — utilisez un autre port : `PORT=8080 python web_server.py` |
+| « Access denied » (403) ou « Address already in use » sur le port 5000 | AirPlay (Centre de contrôle) de macOS intercepte le port 5000 ; le serveur web écoute donc par défaut sur 8080. Si vous avez besoin du 5000, désactivez le récepteur AirPlay (Réglages Système → Général → AirDrop et Handoff) ou définissez un autre `PORT` |
 | pytubefix cesse de fonctionner après une mise à jour de YouTube | `pip install -U pytubefix` — la bibliothèque est corrigée activement au fil des changements de YouTube |
 | Vidéo indisponible (privée/supprimée) | Elle est placée automatiquement dans la file d'attente — lancez avec `--check-queue` ou `--watch` (ou cliquez sur « Vérifier maintenant » dans l'interface Web) et elle sera téléchargée dès qu'elle redevient disponible |
 
