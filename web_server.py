@@ -225,6 +225,10 @@ def api_files():
     files = []
     if os.path.isdir(out_dir):
         for name in sorted(os.listdir(out_dir)):
+            # Служебные файлы (.DS_Store и т.п.) и временные _tmp_*
+            # в списке скачанного не показываем
+            if name.startswith(".") or name.startswith("_tmp"):
+                continue
             path = os.path.join(out_dir, name)
             if os.path.isfile(path):
                 files.append({"name": name, "size": os.path.getsize(path)})
@@ -235,7 +239,7 @@ def api_files():
 def api_get_file(filename):
     out_dir = os.path.abspath("downloads")
     target = os.path.abspath(os.path.join(out_dir, filename))
-    if not target.startswith(out_dir):
+    if not target.startswith(out_dir + os.sep):
         return Response("Forbidden", status=403)
     if not os.path.isfile(target):
         return Response("Not found", status=404)
