@@ -4,6 +4,7 @@ import sys
 import html
 import json
 import time
+import threading
 import argparse
 import subprocess
 import shutil
@@ -26,6 +27,11 @@ RU_LANG_CODES = {"ru", "rus", "russian", "русский"}
 # Очередь ожидания недоступных видео и битрейт mp3 по умолчанию
 QUEUE_FILE = "pending_queue.json"
 DEFAULT_BITRATE = "192k"
+
+# Веб-интерфейс скачивает в потоках: записи журнала и очереди защищаем
+# блокировками, чтобы параллельные задачи их не портили
+_LOG_LOCK = threading.Lock()
+_QUEUE_LOCK = threading.Lock()
 
 # Регулярка для парсинга txt-лога.
 # ВАЖНО: формат лога — данные, а не интерфейс. Подписи полей фиксированы
@@ -255,8 +261,9 @@ def write_log_entry(video_id, entry_type, title, author, quality, audio_lang,
         "file": filepath,
         "audio_file": audio_file or "—",
     }
-    append_txt_log(entry)
-    regenerate_html_log(parse_log_entries())
+    with _LOG_LOCK:
+        append_txt_log(entry)
+        regenerate_html_log(parse_log_entries())
 
 
 # ---------- Утилиты ----------
@@ -580,35 +587,37 @@ def save_queue(items: list) -> None:
 def add_to_queue(url, quality, lang=DEFAULT_LANG, save_mp3=False,
                  abitrate=DEFAULT_BITRATE, reason="") -> bool:
     """Добавляет недоступное видео в очередь. False — если оно уже там."""
-    items = load_queue()
-    for it in items:
-        if it["url"] == url and it["quality"] == quality:
-            it["reason"] = reason or it.get("reason", "")
-            it["last_checked"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            save_queue(items)
-            return False
-    items.append({
-        "url": url,
-        "quality": quality,
-        "lang": lang,
-        "save_mp3": bool(save_mp3),
-        "abitrate": abitrate,
-        "reason": reason,
-        "added_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "last_checked": None,
-        "attempts": 0,
-    })
-    save_queue(items)
-    return True
+    with _QUEUE_LOCK:
+        items = load_queue()
+        for it in items:
+            if it["url"] == url and it["quality"] == quality:
+                it["reason"] = reason or it.get("reason", "")
+                it["last_checked"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                save_queue(items)
+                return False
+        items.append({
+            "url": url,
+            "quality": quality,
+            "lang": lang,
+            "save_mp3": bool(save_mp3),
+            "abitrate": abitrate,
+            "reason": reason,
+            "added_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "last_checked": None,
+            "attempts": 0,
+        })
+        save_queue(items)
+        return True
 
 
 def remove_from_queue(url: str) -> bool:
-    items = load_queue()
-    rest = [it for it in items if it["url"] != url]
-    if len(rest) == len(items):
-        return False
-    save_queue(rest)
-    return True
+    with _QUEUE_LOCK:
+        items = load_queue()
+        rest = [it for it in items if it["url"] != url]
+        if len(rest) == len(items):
+            return False
+        save_queue(rest)
+        return True
 
 
 def check_pending(output_path: str = "downloads", progress=None) -> int:
@@ -617,23 +626,26 @@ def check_pending(output_path: str = "downloads", progress=None) -> int:
     с теми же параметрами и убирается из очереди. Возвращает число
     успешно скачанных.
     """
-    items = load_queue()
+    with _QUEUE_LOCK:
+        items = load_queue()
     if not items:
         print(t("queue_empty"))
         return 0
 
     print(t("queue_checking"))
-    resolved = 0
-    rest = []
+    resolved_keys = []   # (url, quality) скачанных
+    checked = {}         # (url, quality) -> обновления для оставшихся
     for it in items:
+        key = (it["url"], it["quality"])
         try:
             yt = YouTube(it["url"], on_progress_callback=on_progress)
             title = yt.title
         except Exception as e:
-            it["last_checked"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            it["attempts"] = it.get("attempts", 0) + 1
-            it["reason"] = str(e)
-            rest.append(it)
+            checked[key] = {
+                "last_checked": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "attempts": it.get("attempts", 0) + 1,
+                "reason": str(e),
+            }
             print(t("queue_still_unavailable", url=it["url"], reason=e))
             continue
 
@@ -644,12 +656,28 @@ def check_pending(output_path: str = "downloads", progress=None) -> int:
                           save_mp3=it.get("save_mp3", False),
                           abitrate=it.get("abitrate", DEFAULT_BITRATE),
                           progress=progress, yt=yt):
-            resolved += 1
+            resolved_keys.append(key)
         else:
-            it["attempts"] = it.get("attempts", 0) + 1
+            checked[key] = {
+                "last_checked": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "attempts": it.get("attempts", 0) + 1,
+                "reason": it.get("reason", ""),
+            }
+
+    # Сеть позади: объединяем с текущим состоянием очереди, чтобы не
+    # потерять записи, добавленные другими задачами за время проверки
+    with _QUEUE_LOCK:
+        current = load_queue()
+        rest = []
+        for it in current:
+            key = (it["url"], it["quality"])
+            if key in resolved_keys:
+                continue
+            if key in checked:
+                it.update(checked[key])
             rest.append(it)
-    save_queue(rest)
-    return resolved
+        save_queue(rest)
+    return len(resolved_keys)
 
 
 def _watch_loop(minutes: float, output_path: str = "downloads"):

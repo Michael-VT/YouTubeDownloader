@@ -224,6 +224,8 @@ Duplicates are tracked per type and quality: the same video can be downloaded at
 
 Existing files are never deleted or overwritten: the same video at another quality or bitrate is saved as a new file next to the old one (`Video title [1080p].mp4`, `Video title [320k].mp3`). To replace a file, delete it from `downloads/` yourself.
 
+The journal is append-only: entries are never removed — the full download history stays in both files even after the media files themselves have been deleted from `downloads/`. Parallel web-UI downloads are serialized with a lock, so no entry can be lost or corrupted.
+
 ## Troubleshooting
 
 | Problem | Solution |

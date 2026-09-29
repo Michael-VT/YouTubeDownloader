@@ -224,6 +224,8 @@ Les doublons sont suivis par type et qualité : une même vidéo peut être tél
 
 Les fichiers existants ne sont jamais supprimés ni écrasés : la même vidéo dans une autre qualité ou un autre débit est enregistrée dans un nouveau fichier à côté de l'ancien (`Titre de la vidéo [1080p].mp4`, `Titre de la vidéo [320k].mp3`). Pour remplacer un fichier, supprimez-le vous-même de `downloads/`.
 
+Le journal est en ajout seul : les entrées ne sont jamais supprimées — l'historique complet des téléchargements reste dans les deux fichiers, même si les fichiers média eux-mêmes ont déjà été supprimés de `downloads/`. Les téléchargements parallèles de l'interface Web sont sérialisés par un verrou, donc aucune entrée ne peut être perdue ou corrompue.
+
 ## Dépannage
 
 | Problème | Solution |

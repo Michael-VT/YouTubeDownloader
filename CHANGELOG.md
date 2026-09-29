@@ -55,6 +55,14 @@ Previously a DASH merge silently overwrote `Title.mp4` regardless of quality,
 and a progressive re-download skipped fetching but logged the new resolution
 against the old file.
 
+### Append-only download journal
+
+`download_log.txt` / `download_log.html` only ever gain entries: nothing is
+removed, even when the referenced files have already been deleted from
+`downloads/` — the full download history is preserved. Journal and queue
+writes are now serialized with locks, so parallel web-UI downloads can no
+longer drop an entry from the regenerated HTML or lose a queued item.
+
 ### Fixes
 
 - default web-server port changed **5000 → 8080**: on macOS, AirPlay Receiver

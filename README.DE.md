@@ -224,6 +224,8 @@ Duplikate werden nach Typ und Qualität verfolgt: dasselbe Video kann in mehrere
 
 Vorhandene Dateien werden niemals gelöscht oder überschrieben: dasselbe Video in anderer Qualität oder Bitrate wird als neue Datei neben der alten gespeichert (`Videotitel [1080p].mp4`, `Videotitel [320k].mp3`). Um eine Datei zu ersetzen, löschen Sie sie selbst aus `downloads/`.
 
+Das Protokoll wird nur ergänzt: Einträge werden niemals entfernt — der vollständige Download-Verlauf bleibt in beiden Dateien erhalten, auch wenn die Mediendateien selbst bereits aus `downloads/` gelöscht wurden. Parallele Downloads der Web-UI werden über eine Sperre serialisiert, sodass keine Einträge verloren gehen oder beschädigt werden.
+
 ## Fehlerbehebung
 
 | Problem | Lösung |

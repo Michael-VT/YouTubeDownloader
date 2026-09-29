@@ -224,6 +224,8 @@ Duplicatas são controladas por tipo e qualidade: o mesmo vídeo pode ser baixad
 
 Os arquivos existentes nunca são excluídos nem sobrescritos: o mesmo vídeo em outra qualidade ou bitrate é salvo como um novo arquivo ao lado do antigo (`Video title [1080p].mp4`, `Video title [320k].mp3`). Para substituir um arquivo, apague-o você mesmo de `downloads/`.
 
+O registro é apenas incremental: as entradas nunca são removidas — o histórico completo de downloads permanece nos dois arquivos, mesmo que os próprios arquivos de mídia já tenham sido apagados de `downloads/`. Downloads paralelos da Web UI são serializados com um bloqueio, portanto nenhuma entrada se perde ou se corrompe.
+
 ## Solução de problemas
 
 | Problema | Solução |
