@@ -16,10 +16,11 @@ Lizenz: **MIT** — kostenlose Nutzung ohne Einschränkungen (siehe [LICENSE](LI
 ## Funktionen
 
 - 🎥 Video in maximaler Qualität (1080p / 1440p / 4K über DASH-Streams, mit ffmpeg zusammengeführt), mittel oder niedrig
-- 🎧 Nur Audio, konvertiert zu mp3 (192 kbps) — ideal zum Hören unterwegs
-- 📄 Texttranskript aus Untertiteln (bereinigt von Zeitmarken und Markup), gespeichert neben der Mediendatei
+- 🎧 Nur Audio, konvertiert zu mp3 mit wählbarer Bitrate (128/192/320 kbps) — ideal zum Hören unterwegs
+- 📄 Texttranskript aus Untertiteln (bereinigt von Zeitmarken und Markup), gespeichert neben der Mediendatei oder eigenständig (Modus `text`)
 - 🌍 Auswahl der Audio- und Untertitelsprache (`--lang ru`, `en`, …); bei mehrsprachigen Videos hat die russische Spur Vorrang
-- 🔁 Duplikatschutz: bereits heruntergeladene Videos werden übersprungen (ID-basiertes Protokoll)
+- 🔁 Duplikatschutz nach Inhaltstyp: ein in niedriger Qualität geladenes Video kann später in maximaler Qualität, als Audio oder als Text geladen werden (ID-basiertes Protokoll; Einträge ohne Datei auf der Festplatte sind erneut ladbar)
+- ⏳ Warteschlange: ein nicht verfügbares Video (privat, entfernt, Bot-Prüfung) wird automatisch eingereiht und mit Benachrichtigung geladen, sobald es verfügbar ist
 - 📝 Download-Protokoll in zwei Formaten: `download_log.txt` und `download_log.html`
 - 🖥️ Web-UI: Videoinformationen vor dem Download, Live-Fortschritt, Verlauf, Datei-Downloads direkt aus dem Browser
 - 🌐 Sprache der Oberfläche in CLI und Web-UI umschaltbar (6 Sprachen, standardmäßig automatisch erkannt)
@@ -39,7 +40,7 @@ Lizenz: **MIT** — kostenlose Nutzung ohne Einschränkungen (siehe [LICENSE](LI
 └── legacy/                # Alte Skriptversionen (Entwicklungsgeschichte)
 ```
 
-Heruntergeladene Dateien landen in `downloads/`, das Protokoll liegt im Projektstamm. Beide Pfade (und persönliche Dateien) sind über `.gitignore` von git ausgeschlossen.
+Heruntergeladene Dateien landen in `downloads/`, das Protokoll liegt im Projektstamm und die Warteschlange in `pending_queue.json`. Alle diese Pfade (und persönliche Dateien) sind über `.gitignore` von git ausgeschlossen.
 
 ## Installation (lokal)
 
@@ -84,6 +85,8 @@ Fragt Schritt für Schritt ab: URL → Qualität → Sprache → ob mp3 gespeich
 ```bash
 python download.py "https://youtu.be/XXXX" max          # Video in bester Qualität + Transkript
 python download.py "https://youtu.be/XXXX" audio        # nur mp3 + Transkript
+python download.py "https://youtu.be/XXXX" text         # nur Text (Transkription)
+python download.py "https://youtu.be/XXXX" audio --abitrate 320k
 python download.py "https://youtu.be/XXXX" medium --lang en
 python download.py "https://youtu.be/XXXX" max --mp3 -o video   # + mp3, Ordner video/
 python download.py "https://youtu.be/XXXX" max --ui-lang de     # deutsche Oberfläche
@@ -92,13 +95,25 @@ python download.py "https://youtu.be/XXXX" max --ui-lang de     # deutsche Oberf
 | Argument | Bedeutung |
 |---|---|
 | `url` | Video-URL (ohne sie — interaktiver Modus) |
-| `quality` | `max` / `medium` / `low` / `audio` |
+| `quality` | `max` / `medium` / `low` / `audio` / `text` |
+| `--abitrate` | mp3-Bitrate für `audio` und `--mp3`: `128k`/`192k`/`320k` (Standard 192k) |
 | `--lang`, `-l` | Audio- und Transkriptsprache (Standard: `ru`) |
 | `--mp3` | zusätzlich eine mp3-Spur neben dem mp4 speichern |
 | `-o`, `--output` | Ausgabeordner (Standard: `downloads`) |
 | `--ui-lang`, `-u` | Sprache der Oberfläche: `en`/`ru`/`uk`/`pt`/`de`/`fr` |
 
 Die Sprache der Oberfläche wird automatisch anhand der Systemlocale (`LANG`/`LC_ALL`) erkannt; mit `--ui-lang` können Sie sie überschreiben, alternativ die Umgebungsvariable `YTD_LANG` setzen.
+
+Befehle für die Warteschlange:
+
+```bash
+python download.py --check-queue     # Warteschlange prüfen und Verfügbares herunterladen
+python download.py --watch 30        # Warteschlange überwachen, Prüfung alle 30 Minuten (Ctrl+C zum Beenden)
+python download.py --queue-list      # Warteschlange anzeigen
+python download.py --queue-remove URL
+```
+
+Ein derzeit nicht verfügbares Video (privat, entfernt, Bot-Prüfung) wird automatisch in die Warteschlange gestellt; zudem wird die Warteschlange bei jedem Start automatisch geprüft.
 
 Vollständige Hilfe: `python download.py --help`
 
@@ -107,6 +122,7 @@ Ergebnis in `downloads/`:
 ```
 Videotitel.mp4                  # Video (bzw. .mp3 im Audio-Modus)
 Videotitel.mp3                  # mit --mp3 oder quality=audio
+Videotitel [320k].mp3           # Audio mit nicht standardmäßiger Bitrate
 Videotitel.transcript.txt       # Transkript aus Untertiteln
 ```
 
@@ -118,9 +134,9 @@ python web_server.py
 
 Öffnen Sie **http://127.0.0.1:5000** im Browser:
 
-1. Link einfügen → **„Infos abrufen“**: Vorschaubild, Autor, Dauer, verfügbare Auflösungen, Untertitel-Verfügbarkeit, Status („neu“ / „bereits heruntergeladen“)
-2. Qualität und Sprache wählen → **„Herunterladen“**: Live-Fortschrittsbalken und Konsolen-Protokoll
-3. Darunter — die Liste der fertigen Dateien (direkt aus dem Browser herunterladbar) und das vollständige Download-Protokoll
+1. Link einfügen → **„Infos abrufen“**: Vorschaubild, Autor, Dauer, verfügbare Auflösungen, Untertitel-Verfügbarkeit, Status („neu“ oder genau das bereits Geladene: Video 1080p, mp3, Transkription)
+2. Qualität, Sprache und mp3-Bitrate wählen → **„Herunterladen“**: Live-Fortschrittsbalken und Konsolen-Protokoll
+3. Darunter — die Liste der fertigen Dateien (direkt aus dem Browser herunterladbar), das vollständige Download-Protokoll und die Kartenansicht der Warteschlange mit der Schaltfläche „Jetzt prüfen“
 
 Die Sprache der Oberfläche wird mit dem 🌐-Auswahlfeld in der oberen rechten Ecke gewählt; die Auswahl wird im Browser gemerkt. Das Download-Protokoll bzw. die Konsolenausgabe folgt ebenfalls der gewählten Sprache.
 
@@ -139,7 +155,7 @@ Eine statische Seite (GitHub Pages) funktioniert hier nicht — ein Python-Backe
 Das Repository enthält einen manuell auslösbaren Workflow `.github/workflows/download.yml`:
 
 1. Tab **Actions** öffnen → **Download YouTube video** → **Run workflow**
-2. URL, Qualität (`max`/`medium`/`low`/`audio`), Inhaltssprache, Sprache der Oberfläche und ob mp3 benötigt wird angeben
+2. URL, Qualität (`max`/`medium`/`low`/`audio`/`text`), mp3-Bitrate, Inhaltssprache, Sprache der Oberfläche und ob mp3 benötigt wird angeben
 3. Auf den Abschluss warten → in der Laufzeit-Zusammenfassung erscheint das **Artefakt `youtube-download`** — Laden Sie das Zip mit Ihren Dateien herunter
 
 Im Repository wird nichts gespeichert: Der Lauf liefert nur die Mediendatei selbst (mp4/mp3) als kurzlebiges Artefakt (1 Tag). Laden Sie das Zip aus der Laufzeit-Zusammenfassung; für Transkripte und Logs führen Sie das Tool lokal aus.
@@ -161,7 +177,7 @@ Jeder Download hängt einen Eintrag an:
 - `download_log.txt` — maschinenlesbares Protokoll (dient der Erkennung von „bereits heruntergeladen“);
 - `download_log.html` — eine gut lesbare Tabelle mit Links.
 
-Um ein Video erneut herunterzuladen, entfernen Sie seine ID aus `download_log.txt` (und die Datei aus `downloads/`).
+Duplikate werden nach Typ und Qualität verfolgt: dasselbe Video kann in mehreren Auflösungen, mehreren mp3-Bitraten und als Text geladen werden. Um genau dasselbe Element erneut zu laden, entfernen Sie seine Zeile aus `download_log.txt` — oder löschen Sie einfach die Datei aus `downloads/`: Einträge ohne Datei auf der Festplatte sind erneut ladbar.
 
 ## Fehlerbehebung
 
@@ -173,6 +189,7 @@ Um ein Video erneut herunterzuladen, entfernen Sie seine ID aus `download_log.tx
 | Kein Transkript | Das Video hat keine Untertitel. Automatisch von YouTube erzeugte Untertitel werden ebenfalls unterstützt, sofern vorhanden |
 | „Address already in use“ beim Starten der Web-UI | Unter macOS ist Port 5000 oft durch AirPlay (Kontrollzentrum) belegt — anderen Port verwenden: `PORT=8080 python web_server.py` |
 | pytubefix funktioniert nach einem YouTube-Update nicht mehr | `pip install -U pytubefix` — die Bibliothek wird aktiv gepatcht, wenn sich YouTube ändert |
+| Video nicht verfügbar (privat/entfernt) | Es wird automatisch in die Warteschlange gestellt — mit `--check-queue` oder `--watch` ausführen (oder in der Web-UI „Jetzt prüfen“ klicken), dann lädt es sich, sobald es verfügbar ist |
 
 ## Lizenz
 

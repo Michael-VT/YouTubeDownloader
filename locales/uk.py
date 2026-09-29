@@ -4,11 +4,16 @@ STRINGS = {
     # ---------- CLI: argparse ----------
     "app_desc": "Завантаження відео, аудіо та транскриптів з YouTube.",
     "help_url": "URL відео на YouTube",
-    "help_quality": "Якість: max / medium / low / audio",
+    "help_quality": "Якість: max / medium / low / audio / text",
     "help_lang": "Мова аудіо/транскрипту (за замовчуванням: {default})",
     "help_mp3": "Також зберегти mp3-доріжку",
     "help_output": "Тека для збереження (за замовчуванням: downloads)",
     "help_ui_lang": "Мова інтерфейсу: en/ru/uk/pt/de/fr (за замовчуванням: автовизначення)",
+    "help_abitrate": "Бітрейт mp3 для режимів audio/--mp3 (128k/192k/320k, типово 192k)",
+    "help_check_queue": "Перевірити чергу очікування (чи стало щось доступним) і вийти",
+    "help_queue_list": "Показати чергу очікування",
+    "help_queue_remove": "Прибрати посилання з черги очікування",
+    "help_watch": "Стежити за чергою: перевіряти кожні N хвилин (типово 15)",
 
     # ---------- CLI: interactive ----------
     "choose_quality": "Оберіть якість:",
@@ -16,7 +21,8 @@ STRINGS = {
     "q_medium": "  2 — середня",
     "q_low": "  3 — низька",
     "q_audio": "  4 — лише аудіо (mp3)",
-    "prompt_quality": "Номер (1/2/3/4) [1]: ",
+    "q_text": "  5 — лише текст (транскрипція)",
+    "prompt_quality": "Номер (1/2/3/4/5) [1]: ",
     "prompt_url": "🔗 URL YouTube: ",
     "prompt_lang": "Мова аудіо/транскрипту [{default}]: ",
     "prompt_mp3": "Також зберегти mp3-доріжку? (y/N): ",
@@ -29,16 +35,24 @@ STRINGS = {
   medium  — середня
   low     — найнижча (144p–360p)
   audio   — лише аудіо у форматі mp3 (зручно для прослуховування)
+  text    — лише текст (транскрипція із субтитрів)
 
 ДОДАТКОВІ ОПЦІЇ:
   --mp3            також зберегти mp3-доріжку поруч із mp4
+  --abitrate RATE  бітрейт mp3: 128k/192k/320k (типово 192k)
   --lang ru|en|…   мова аудіо та транскрипту (за замовчуванням: ru)
   --ui-lang LL     мова інтерфейсу: en/ru/uk/pt/de/fr (за замовчуванням: авто)
   -o DIR           тека для збереження (за замовчуванням: downloads)
+  --check-queue    перевірити чергу очікування і завантажити те, що стало доступним
+  --queue-list     показати чергу очікування
+  --queue-remove U прибрати посилання з черги очікування
+  --watch [MIN]    стежити за чергою: перевірка кожні MIN хвилин (типово 15)
 
 ПРИКЛАДИ:
   python download.py "https://youtu.be/XXXX" max
   python download.py "https://youtu.be/XXXX" audio
+  python download.py "https://youtu.be/XXXX" text
+  python download.py "https://youtu.be/XXXX" audio --abitrate 320k
   python download.py "https://youtu.be/XXXX" medium --lang en
   python download.py "https://youtu.be/XXXX" max --mp3 -o video
   python download.py "https://youtu.be/XXXX" max --ui-lang de
@@ -48,9 +62,16 @@ STRINGS = {
     # ---------- Fetch / info ----------
     "info_log_entries": "ℹ️  У журналі вже {count} записів.",
     "err_get_video": "❌ Помилка отримання відео: {error}",
-    "warn_already_downloaded": "⚠️  Це відео вже завантажене раніше. Пропускаємо.",
-    "already_id": "   ID: {id}",
-    "already_title": "   Назва: {title}",
+    "err_bad_url": "❌ Некоректне посилання: {error}",
+    "already_summary": "📦 Уже завантажено для цього відео: {items}",
+    "sum_video": "відео {res}",
+    "sum_audio": "аудіо {value}",
+    "sum_transcript": "транскрипція",
+    "already_video_quality": "⚠️  Відео в якості {res} уже завантажено. Пропускаю.",
+    "already_audio_quality": "⚠️  Аудіо mp3 {bitrate} уже завантажено. Пропускаю.",
+    "already_transcript": "⚠️  Транскрипція вже завантажена: {path}",
+    "info_transcript_exists": "ℹ️  Транскрипція вже є — повторно не завантажую.",
+    "err_no_captions_text": "❌ Субтитри недоступні — текст цього відео отримати не можна.",
     "video_title": "🎬 Назва: {title}",
     "video_author": "👤 Автор: {author}",
     "video_duration": "⏱  Тривалість: {duration}",
@@ -127,6 +148,23 @@ STRINGS = {
     "html_col_size": "Розмір",
     "html_col_audio_file": "Аудіофайл",
 
+    # ---------- Черга очікування ----------
+    "queue_added": "📥 Відео зараз недоступне — додано до черги очікування.",
+    "queue_hint": "   Перевірити: --check-queue; стежити: --watch; список: --queue-list.",
+    "queue_already": "ℹ️  Це відео вже в черзі очікування.",
+    "queue_count": "⏳ У черзі очікування: {count} — перевіряю…",
+    "queue_checking": "⌛ Перевіряю чергу очікування…",
+    "queue_empty": "✅ Черга очікування порожня.",
+    "queue_resolved": "🎉 Відео стало доступним — завантажую: {title}",
+    "queue_still_unavailable": "   • досі недоступне: {url} ({reason})",
+    "queue_watching": "👀 Стежу за чергою очікування: перевірка кожні {minutes} хв (Ctrl+C — вихід).",
+    "queue_done_watching": "✅ Черга порожня — стеження завершено.",
+    "queue_watch_stopped": "👋 Стеження зупинено.",
+    "queue_list_header": "⏳ Черга очікування:",
+    "queue_list_line": "   • [{quality}] {url} — додано {added}; причина: {reason}",
+    "queue_removed": "🗑 Прибрано з черги: {url}",
+    "queue_not_found": "ℹ️  Цього посилання немає в черзі: {url}",
+
     # ---------- Web server ----------
     "srv_url_missing": "Не вказано URL",
     "srv_bad_quality": "Некоректна якість",
@@ -134,6 +172,8 @@ STRINGS = {
     "srv_open_browser": "🌐 Відкрийте у браузері: {url}",
     "srv_task_starting": "Запуск…",
     "srv_task_done": "Готово",
+    "srv_task_failed": "Завантаження не вдалося",
+    "srv_bad_abitrate": "Некоректний бітрейт mp3",
 
     # ---------- Web UI ----------
     "web_app_title": "🎬 YouTube Downloader",
@@ -146,8 +186,10 @@ STRINGS = {
     "web_q_medium": "Середня",
     "web_lang_audio": "Мова аудіо / транскрипту",
     "web_q_audio": "Лише аудіо (mp3)",
+    "web_q_text": "Лише текст (транскрипція)",
     "web_extra_label": "Додатково",
     "web_save_mp3": "Також зберегти mp3 поруч із mp4",
+    "web_abitrate_label": "Бітрейт mp3 (для аудіо)",
     "web_btn_info": "🔍 Отримати інформацію",
     "web_btn_download": "⬇️ Завантажити",
     "web_btn_loading": '<span class="spinner"></span>Завантаження…',
@@ -160,7 +202,9 @@ STRINGS = {
     "web_captions_yes": "  •  субтитри доступні",
     "web_captions_no": "  •  без субтитрів",
     "web_badge_new": "Нове",
-    "web_badge_downloaded": "Вже завантажено",
+    "web_lbl_video": "відео",
+    "web_lbl_audio": "аудіо",
+    "web_lbl_transcript": "текст",
     "web_progress_title": "Хід завантаження",
     "web_files_title": "📁 Завантажені файли",
     "web_log_title": "📊 Журнал завантажень",
@@ -181,4 +225,12 @@ STRINGS = {
     "web_error_prefix": "❌ Помилка: ",
     "web_launching": "Запуск…",
     "web_done": "✅ Готово",
+    "web_queue_title": "⏳ Очікування доступності",
+    "web_queue_empty": "Черга порожня",
+    "web_queue_col_url": "Посилання",
+    "web_queue_col_quality": "Якість",
+    "web_queue_col_added": "Додано",
+    "web_queue_col_reason": "Причина",
+    "web_queue_btn_check": "⌛ Перевірити зараз",
+    "web_queue_checked": "Перевірено: завантажено {resolved}, лишилось у черзі {remaining}",
 }

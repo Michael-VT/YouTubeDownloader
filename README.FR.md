@@ -16,10 +16,11 @@ Licence : **MIT** — utilisation libre sans restriction (voir [LICENSE](LICENSE
 ## Fonctionnalités
 
 - 🎥 Vidéo en qualité maximale (1080p / 1440p / 4K via flux DASH fusionnés avec ffmpeg), moyenne ou basse
-- 🎧 Audio seul, converti en mp3 (192 kbps) — idéal pour l'écoute en déplacement
-- 📄 Transcription textuelle des sous-titres (nettoyée des codes temporels et des balises) enregistrée à côté du fichier média
+- 🎧 Audio seul, converti en mp3 avec débit au choix (128/192/320 kbps) — idéal pour l'écoute en déplacement
+- 📄 Transcription textuelle des sous-titres (nettoyée des codes temporels et des balises) enregistrée à côté du fichier média ou seule (mode `text`)
 - 🌍 Choix de la langue de la piste audio et des sous-titres (`--lang ru`, `en`, …) ; la piste russe est prioritaire sur les vidéos multilingues
-- 🔁 Protection contre les doublons : les vidéos déjà téléchargées sont ignorées (un journal basé sur les ID est tenu)
+- 🔁 Protection contre les doublons par type de contenu : une vidéo téléchargée en basse qualité peut ensuite être récupérée en qualité maximale, en audio ou en texte (journal basé sur les ID ; les entrées dont le fichier a été supprimé sont retéléchargeables)
+- ⏳ File d'attente : une vidéo indisponible (privée, supprimée, contrôle anti-bot) est mise en file automatiquement et téléchargée avec notification dès qu'elle redevient disponible
 - 📝 Journal de téléchargement en deux formats : `download_log.txt` et `download_log.html`
 - 🖥️ Interface Web : informations sur la vidéo avant téléchargement, progression en direct, historique, téléchargement des fichiers directement depuis le navigateur
 - 🌐 Langue de l'interface modifiable en CLI comme dans l'interface Web (6 langues, détection automatique par défaut)
@@ -39,7 +40,7 @@ Licence : **MIT** — utilisation libre sans restriction (voir [LICENSE](LICENSE
 └── legacy/                # Anciennes versions du script (historique de développement)
 ```
 
-Les fichiers téléchargés vont dans `downloads/`, le journal se trouve à la racine du projet. Ces deux chemins (ainsi que les fichiers personnels) sont exclus de git via `.gitignore`.
+Les fichiers téléchargés vont dans `downloads/`, le journal se trouve à la racine du projet et la file d'attente dans `pending_queue.json`. Tous ces chemins (ainsi que les fichiers personnels) sont exclus de git via `.gitignore`.
 
 ## Installation (locale)
 
@@ -84,6 +85,8 @@ Pose les questions étape par étape : URL → qualité → langue → faut-il e
 ```bash
 python download.py "https://youtu.be/XXXX" max          # vidéo de meilleure qualité + transcription
 python download.py "https://youtu.be/XXXX" audio        # mp3 seul + transcription
+python download.py "https://youtu.be/XXXX" text         # texte seul (transcription)
+python download.py "https://youtu.be/XXXX" audio --abitrate 320k
 python download.py "https://youtu.be/XXXX" medium --lang en
 python download.py "https://youtu.be/XXXX" max --mp3 -o video   # + mp3, dossier video/
 python download.py "https://youtu.be/XXXX" max --ui-lang de     # interface en allemand
@@ -92,13 +95,25 @@ python download.py "https://youtu.be/XXXX" max --ui-lang de     # interface en a
 | Argument | Signification |
 |---|---|
 | `url` | URL de la vidéo (sans elle — mode interactif) |
-| `quality` | `max` / `medium` / `low` / `audio` |
+| `quality` | `max` / `medium` / `low` / `audio` / `text` |
+| `--abitrate` | débit mp3 pour `audio` et `--mp3` : `128k`/`192k`/`320k` (par défaut 192k) |
 | `--lang`, `-l` | langue de l'audio et de la transcription (par défaut : `ru`) |
 | `--mp3` | enregistrer en plus une piste mp3 à côté du mp4 |
 | `-o`, `--output` | dossier de sortie (par défaut : `downloads`) |
 | `--ui-lang`, `-u` | langue de l'interface : `en`/`ru`/`uk`/`pt`/`de`/`fr` |
 
 La langue de l'interface est détectée automatiquement depuis les paramètres régionaux du système (`LANG`/`LC_ALL`) ; utilisez `--ui-lang` pour forcer le choix, ou définissez la variable d'environnement `YTD_LANG`.
+
+Commandes de la file d'attente :
+
+```bash
+python download.py --check-queue     # vérifier la file et télécharger ce qui est devenu disponible
+python download.py --watch 30        # surveiller la file, vérification toutes les 30 minutes (Ctrl+C pour quitter)
+python download.py --queue-list      # afficher la file
+python download.py --queue-remove URL
+```
+
+Une vidéo momentanément indisponible (privée, supprimée, contrôle anti-bot) est ajoutée à la file automatiquement ; de plus, la file est vérifiée automatiquement à chaque exécution.
 
 Aide complète : `python download.py --help`
 
@@ -107,6 +122,7 @@ Résultat dans `downloads/` :
 ```
 Titre de la vidéo.mp4            # vidéo (ou .mp3 en mode audio)
 Titre de la vidéo.mp3            # avec --mp3 ou quality=audio
+Titre de la vidéo [320k].mp3     # audio avec un débit non standard
 Titre de la vidéo.transcript.txt # transcription des sous-titres
 ```
 
@@ -118,9 +134,9 @@ python web_server.py
 
 Ouvrez **http://127.0.0.1:5000** dans votre navigateur :
 
-1. Collez un lien → **« Obtenir les infos »** : miniature, auteur, durée, résolutions disponibles, présence de sous-titres, statut (« nouveau » / « déjà téléchargée »)
-2. Choisissez la qualité et la langue → **« Télécharger »** : barre de progression en direct et journal console
-3. En dessous — la liste des fichiers prêts (téléchargez-les directement depuis le navigateur) et le journal complet des téléchargements
+1. Collez un lien → **« Obtenir les infos »** : miniature, auteur, durée, résolutions disponibles, présence de sous-titres, statut (« nouveau », ou exactement ce qui est déjà téléchargé : vidéo 1080p, mp3, transcription)
+2. Choisissez la qualité, la langue et le débit mp3 → **« Télécharger »** : barre de progression en direct et journal console
+3. En dessous — la liste des fichiers prêts (téléchargez-les directement depuis le navigateur), le journal complet des téléchargements et la carte de la file d'attente avec le bouton « Vérifier maintenant »
 
 La langue de l'interface se choisit avec le sélecteur 🌐 en haut à droite ; le choix est mémorisé dans le navigateur. Le journal de téléchargement et la sortie console suivent eux aussi la langue sélectionnée.
 
@@ -139,7 +155,7 @@ Un site statique (GitHub Pages) ne fonctionnera pas ici — un backend Python es
 Le dépôt contient un workflow à déclenchement manuel `.github/workflows/download.yml` :
 
 1. Ouvrez l'onglet **Actions** → **Download YouTube video** → **Run workflow**
-2. Renseignez l'URL, la qualité (`max`/`medium`/`low`/`audio`), la langue du contenu, la langue de l'interface et la nécessité du mp3
+2. Renseignez l'URL, la qualité (`max`/`medium`/`low`/`audio`/`text`), le débit mp3, la langue du contenu, la langue de l'interface et la nécessité du mp3
 3. Attendez la fin → le résumé de l'exécution affiche l'**artefact `youtube-download`** — téléchargez le zip avec vos fichiers
 
 Rien n'est stocké dans le dépôt : l'exécution livre uniquement le fichier média lui-même (mp4/mp3) sous forme d'artefact éphémère (1 jour). Téléchargez le zip depuis le résumé de l'exécution ; pour les transcriptions et les journaux, exécutez l'outil localement.
@@ -161,7 +177,7 @@ Chaque téléchargement ajoute une entrée :
 - `download_log.txt` — journal lisible par machine (utilisé pour détecter les « déjà téléchargées ») ;
 - `download_log.html` — un tableau lisible avec des liens.
 
-Pour retélécharger une vidéo, supprimez son ID de `download_log.txt` (et le fichier de `downloads/`).
+Les doublons sont suivis par type et qualité : une même vidéo peut être téléchargée en plusieurs résolutions, plusieurs débits mp3 et en texte. Pour retélécharger le même élément, supprimez sa ligne de `download_log.txt` — ou supprimez simplement le fichier de `downloads/` : les entrées sans fichier sur le disque sont retéléchargeables.
 
 ## Dépannage
 
@@ -173,6 +189,7 @@ Pour retélécharger une vidéo, supprimez son ID de `download_log.txt` (et le f
 | Pas de transcription | La vidéo n'a pas de sous-titres. Les sous-titres auto-générés par YouTube sont également pris en charge quand ils existent |
 | « Address already in use » au démarrage de l'interface Web | Sur macOS, le port 5000 est souvent occupé par AirPlay (Centre de contrôle) — utilisez un autre port : `PORT=8080 python web_server.py` |
 | pytubefix cesse de fonctionner après une mise à jour de YouTube | `pip install -U pytubefix` — la bibliothèque est corrigée activement au fil des changements de YouTube |
+| Vidéo indisponible (privée/supprimée) | Elle est placée automatiquement dans la file d'attente — lancez avec `--check-queue` ou `--watch` (ou cliquez sur « Vérifier maintenant » dans l'interface Web) et elle sera téléchargée dès qu'elle redevient disponible |
 
 ## Licence
 

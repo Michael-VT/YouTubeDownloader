@@ -4,11 +4,16 @@ STRINGS = {
     # ---------- CLI: argparse ----------
     "app_desc": "Videos, Audio und Transkripte von YouTube herunterladen.",
     "help_url": "YouTube-Video-URL",
-    "help_quality": "Qualität: max / medium / low / audio",
+    "help_quality": "Qualität: max / medium / low / audio / text",
     "help_lang": "Audio-/Transkriptsprache (Standard: {default})",
     "help_mp3": "Zusätzlich eine mp3-Spur speichern",
     "help_output": "Ausgabeordner (Standard: downloads)",
     "help_ui_lang": "Sprache der Oberfläche: en/ru/uk/pt/de/fr (Standard: automatisch)",
+    "help_abitrate": "mp3-Bitrate für die Modi audio/--mp3 (128k/192k/320k, Standard 192k)",
+    "help_check_queue": "Warteschlange prüfen (ob etwas verfügbar wurde) und beenden",
+    "help_queue_list": "Warteschlange anzeigen",
+    "help_queue_remove": "Link aus der Warteschlange entfernen",
+    "help_watch": "Warteschlange überwachen: alle N Minuten prüfen (Standard 15)",
 
     # ---------- CLI: interactive ----------
     "choose_quality": "Qualität wählen:",
@@ -16,7 +21,8 @@ STRINGS = {
     "q_medium": "  2 — mittel",
     "q_low": "  3 — niedrig",
     "q_audio": "  4 — nur Audio (mp3)",
-    "prompt_quality": "Nummer (1/2/3/4) [1]: ",
+    "q_text": "  5 — nur Text (Transkription)",
+    "prompt_quality": "Nummer (1/2/3/4/5) [1]: ",
     "prompt_url": "🔗 YouTube-URL: ",
     "prompt_lang": "Audio-/Transkriptsprache [{default}]: ",
     "prompt_mp3": "Zusätzlich eine mp3-Spur speichern? (y/N): ",
@@ -29,16 +35,24 @@ QUALITÄTSMODI:
   medium  — mittel
   low     — niedrigste (144p–360p)
   audio   — nur Audio als mp3 (ideal zum Hören unterwegs)
+  text    — nur Text (Transkription aus den Untertiteln)
 
 ZUSÄTZLICHE OPTIONEN:
   --mp3            zusätzlich eine mp3-Spur neben dem mp4 speichern
+  --abitrate RATE  mp3-Bitrate: 128k/192k/320k (Standard 192k)
   --lang ru|en|…   Audio- und Transkriptsprache (Standard: ru)
   --ui-lang LL     Sprache der Oberfläche: en/ru/uk/pt/de/fr (Standard: automatisch)
   -o DIR           Ausgabeordner (Standard: downloads)
+  --check-queue    Warteschlange prüfen und Verfügbares herunterladen
+  --queue-list     Warteschlange anzeigen
+  --queue-remove U Link aus der Warteschlange entfernen
+  --watch [MIN]    Warteschlange überwachen: Prüfung alle MIN Minuten (Standard 15)
 
 BEISPIELE:
   python download.py "https://youtu.be/XXXX" max
   python download.py "https://youtu.be/XXXX" audio
+  python download.py "https://youtu.be/XXXX" text
+  python download.py "https://youtu.be/XXXX" audio --abitrate 320k
   python download.py "https://youtu.be/XXXX" medium --lang en
   python download.py "https://youtu.be/XXXX" max --mp3 -o video
   python download.py "https://youtu.be/XXXX" max --ui-lang de
@@ -48,9 +62,16 @@ OHNE ARGUMENTE läuft das Tool im interaktiven Modus und fragt Schritt für Schr
     # ---------- Fetch / info ----------
     "info_log_entries": "ℹ️  Das Protokoll enthält bereits {count} Einträge.",
     "err_get_video": "❌ Fehler beim Abrufen des Videos: {error}",
-    "warn_already_downloaded": "⚠️  Wurde bereits früher heruntergeladen. Wird übersprungen.",
-    "already_id": "   ID: {id}",
-    "already_title": "   Titel: {title}",
+    "err_bad_url": "❌ Ungültiger Link: {error}",
+    "already_summary": "📦 Für dieses Video bereits geladen: {items}",
+    "sum_video": "Video {res}",
+    "sum_audio": "Audio {value}",
+    "sum_transcript": "Transkription",
+    "already_video_quality": "⚠️  Video in {res} bereits heruntergeladen. Wird übersprungen.",
+    "already_audio_quality": "⚠️  Audio mp3 {bitrate} bereits heruntergeladen. Wird übersprungen.",
+    "already_transcript": "⚠️  Transkription bereits heruntergeladen: {path}",
+    "info_transcript_exists": "ℹ️  Transkription ist bereits vorhanden — wird nicht erneut geladen.",
+    "err_no_captions_text": "❌ Keine Untertitel verfügbar — der Text dieses Videos kann nicht geladen werden.",
     "video_title": "🎬 Titel: {title}",
     "video_author": "👤 Autor: {author}",
     "video_duration": "⏱  Dauer: {duration}",
@@ -127,6 +148,23 @@ OHNE ARGUMENTE läuft das Tool im interaktiven Modus und fragt Schritt für Schr
     "html_col_size": "Größe",
     "html_col_audio_file": "Audiodatei",
 
+    # ---------- Warteschlange ----------
+    "queue_added": "📥 Das Video ist derzeit nicht verfügbar — in die Warteschlange gestellt.",
+    "queue_hint": "   Prüfen: --check-queue; überwachen: --watch; Liste: --queue-list.",
+    "queue_already": "ℹ️  Dieses Video steht bereits in der Warteschlange.",
+    "queue_count": "⏳ In der Warteschlange: {count} — prüfe…",
+    "queue_checking": "⌛ Prüfe die Warteschlange…",
+    "queue_empty": "✅ Die Warteschlange ist leer.",
+    "queue_resolved": "🎉 Das Video ist jetzt verfügbar — lade: {title}",
+    "queue_still_unavailable": "   • noch nicht verfügbar: {url} ({reason})",
+    "queue_watching": "👀 Überwache die Warteschlange: Prüfung alle {minutes} Min (Ctrl+C zum Beenden).",
+    "queue_done_watching": "✅ Warteschlange leer — Überwachung beendet.",
+    "queue_watch_stopped": "👋 Überwachung gestoppt.",
+    "queue_list_header": "⏳ Warteschlange:",
+    "queue_list_line": "   • [{quality}] {url} — hinzugefügt {added}; Grund: {reason}",
+    "queue_removed": "🗑 Aus der Warteschlange entfernt: {url}",
+    "queue_not_found": "ℹ️  Dieser Link ist nicht in der Warteschlange: {url}",
+
     # ---------- Web server ----------
     "srv_url_missing": "URL fehlt",
     "srv_bad_quality": "Ungültige Qualität",
@@ -134,6 +172,8 @@ OHNE ARGUMENTE läuft das Tool im interaktiven Modus und fragt Schritt für Schr
     "srv_open_browser": "🌐 Im Browser öffnen: {url}",
     "srv_task_starting": "Wird gestartet…",
     "srv_task_done": "Fertig",
+    "srv_task_failed": "Download fehlgeschlagen",
+    "srv_bad_abitrate": "Ungültige mp3-Bitrate",
 
     # ---------- Web UI ----------
     "web_app_title": "🎬 YouTube Downloader",
@@ -146,8 +186,10 @@ OHNE ARGUMENTE läuft das Tool im interaktiven Modus und fragt Schritt für Schr
     "web_q_medium": "Mittel",
     "web_lang_audio": "Audio-/Transkriptsprache",
     "web_q_audio": "Nur Audio (mp3)",
+    "web_q_text": "Nur Text (Transkription)",
     "web_extra_label": "Extras",
     "web_save_mp3": "mp3 zusätzlich neben dem mp4 speichern",
+    "web_abitrate_label": "mp3-Bitrate (für Audio)",
     "web_btn_info": "🔍 Infos abrufen",
     "web_btn_download": "⬇️ Herunterladen",
     "web_btn_loading": '<span class="spinner"></span>Wird geladen…',
@@ -160,7 +202,9 @@ OHNE ARGUMENTE läuft das Tool im interaktiven Modus und fragt Schritt für Schr
     "web_captions_yes": "  •  Untertitel verfügbar",
     "web_captions_no": "  •  keine Untertitel",
     "web_badge_new": "Neu",
-    "web_badge_downloaded": "Bereits heruntergeladen",
+    "web_lbl_video": "Video",
+    "web_lbl_audio": "Audio",
+    "web_lbl_transcript": "Text",
     "web_progress_title": "Download-Fortschritt",
     "web_files_title": "📁 Heruntergeladene Dateien",
     "web_log_title": "📊 Download-Protokoll",
@@ -181,4 +225,12 @@ OHNE ARGUMENTE läuft das Tool im interaktiven Modus und fragt Schritt für Schr
     "web_error_prefix": "❌ Fehler: ",
     "web_launching": "Wird gestartet…",
     "web_done": "✅ Fertig",
+    "web_queue_title": "⏳ Warten auf Verfügbarkeit",
+    "web_queue_empty": "Warteschlange leer",
+    "web_queue_col_url": "Link",
+    "web_queue_col_quality": "Qualität",
+    "web_queue_col_added": "Hinzugefügt",
+    "web_queue_col_reason": "Grund",
+    "web_queue_btn_check": "⌛ Jetzt prüfen",
+    "web_queue_checked": "Geprüft: {resolved} geladen, {remaining} verbleiben in der Warteschlange",
 }

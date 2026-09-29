@@ -70,6 +70,8 @@ def api_info():
             key=lambda r: int(r.replace("p", "")),
         )
 
+        existing = dl.existing_for_video(yt.video_id)
+        existing_any = existing["video"] or existing["audio"] or existing["transcript"]
         return jsonify({
             "id": yt.video_id,
             "title": yt.title,
@@ -80,7 +82,12 @@ def api_info():
             "resolutions": resolutions,
             "progressive_resolutions": prog_res,
             "has_captions": bool(yt.captions),
-            "already_downloaded": yt.video_id in dl.load_downloaded_ids(),
+            "already_downloaded": bool(existing_any),
+            "existing": {
+                "video": sorted(existing["video"]),
+                "audio": sorted(existing["audio"]),
+                "transcript": existing["transcript"] is not None,
+            },
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -93,6 +100,7 @@ def api_download():
     data = request.get_json(silent=True) or {}
     url = (data.get("url") or "").strip()
     quality = data.get("quality", "max")
+    abitrate = data.get("abitrate", dl.DEFAULT_BITRATE)
     lang = data.get("lang", dl.DEFAULT_LANG)
     save_mp3 = bool(data.get("save_mp3", False))
     output = data.get("output", "downloads")
@@ -100,8 +108,10 @@ def api_download():
 
     if not url:
         return jsonify({"error": t("srv_url_missing")}), 400
-    if quality not in ("max", "medium", "low", "audio"):
+    if quality not in ("max", "medium", "low", "audio", "text"):
         return jsonify({"error": t("srv_bad_quality")}), 400
+    if abitrate not in ("128k", "192k", "320k"):
+        return jsonify({"error": t("srv_bad_abitrate")}), 400
 
     task_id = uuid.uuid4().hex
     with TASKS_LOCK:
@@ -136,14 +146,18 @@ def api_download():
             update(percent=percent, message=message)
 
         try:
-            dl.download_video(url, quality, output_path=output,
-                              lang=lang, save_mp3=save_mp3,
-                              progress=progress)
+            ok = dl.download_video(url, quality, output_path=output,
+                                   lang=lang, save_mp3=save_mp3,
+                                   abitrate=abitrate, progress=progress)
 
             with TASKS_LOCK:
-                TASKS[task_id]["status"] = "done"
-                TASKS[task_id]["percent"] = 100
-                TASKS[task_id]["message"] = t("srv_task_done")
+                if ok:
+                    TASKS[task_id]["status"] = "done"
+                    TASKS[task_id]["percent"] = 100
+                    TASKS[task_id]["message"] = t("srv_task_done")
+                else:
+                    TASKS[task_id]["status"] = "error"
+                    TASKS[task_id]["message"] = t("srv_task_failed")
                 TASKS[task_id]["log"] = buf.getvalue()
         except Exception as e:
             with TASKS_LOCK:
@@ -166,6 +180,33 @@ def api_status(task_id):
         if task is None:
             return jsonify({"error": "Unknown task"}), 404
         return jsonify(task)
+
+
+# ---------- API: очередь ожидания ----------
+
+@app.route("/api/queue")
+def api_queue():
+    return jsonify(dl.load_queue())
+
+
+@app.route("/api/queue/check", methods=["POST"])
+def api_queue_check():
+    data = request.get_json(silent=True) or {}
+    if data.get("ui_lang"):
+        i18n.set_language(data["ui_lang"])
+    # Перехватываем stdout, чтобы отдать лог проверки в UI
+    buf = io.StringIO()
+    old_stdout = sys.stdout
+    sys.stdout = buf
+    try:
+        resolved = dl.check_pending()
+    finally:
+        sys.stdout = old_stdout
+    return jsonify({
+        "resolved": resolved,
+        "remaining": len(dl.load_queue()),
+        "log": buf.getvalue(),
+    })
 
 
 # ---------- API: журнал ----------

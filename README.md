@@ -16,10 +16,11 @@ License: **MIT** — free to use without restrictions (see [LICENSE](LICENSE)).
 ## Features
 
 - 🎥 Video at maximum quality (1080p / 1440p / 4K via DASH streams merged with ffmpeg), medium or low
-- 🎧 Audio only, converted to mp3 (192 kbps) — great for listening on the go
-- 📄 Text transcript from subtitles (cleaned of timecodes and markup) saved next to the media file
+- 🎧 Audio only, converted to mp3 at a chosen bitrate (128/192/320 kbps) — great for listening on the go
+- 📄 Text transcript from subtitles (cleaned of timecodes and markup) saved next to the media file or on its own (`quality=text`)
 - 🌍 Audio track and subtitle language selection (`--lang ru`, `en`, …); Russian track gets priority on multi-language videos
-- 🔁 Duplicate protection: already downloaded videos are skipped (an ID-based log is kept)
+- 🔁 Duplicate protection per content type: a video downloaded in low quality can still be fetched in max quality, as audio or as text (an ID-based log is kept; entries whose file was deleted are re-downloadable)
+- ⏳ Waiting queue: an unavailable video (private, removed, bot-check) is queued automatically and downloaded with a notification once it becomes available
 - 📝 Download log in two formats: `download_log.txt` and `download_log.html`
 - 🖥️ Web UI: video info before downloading, live progress, history, file downloads straight from the browser
 - 🌐 Interface language switchable in both CLI and Web UI (6 languages, auto-detected by default)
@@ -39,7 +40,7 @@ License: **MIT** — free to use without restrictions (see [LICENSE](LICENSE)).
 └── legacy/                # Old script versions (development history)
 ```
 
-Downloaded files go to `downloads/`, the log lives in the project root. Both paths (and personal files) are excluded from git via `.gitignore`.
+Downloaded files go to `downloads/`, the log lives in the project root and the waiting queue in `pending_queue.json`. All of these (and personal files) are excluded from git via `.gitignore`.
 
 ## Installation (local)
 
@@ -84,6 +85,8 @@ Asks step by step: URL → quality → language → whether to save mp3.
 ```bash
 python download.py "https://youtu.be/XXXX" max          # best-quality video + transcript
 python download.py "https://youtu.be/XXXX" audio        # mp3 only + transcript
+python download.py "https://youtu.be/XXXX" text         # transcript only
+python download.py "https://youtu.be/XXXX" audio --abitrate 320k
 python download.py "https://youtu.be/XXXX" medium --lang en
 python download.py "https://youtu.be/XXXX" max --mp3 -o video   # + mp3, folder video/
 python download.py "https://youtu.be/XXXX" max --ui-lang de     # German interface
@@ -92,13 +95,25 @@ python download.py "https://youtu.be/XXXX" max --ui-lang de     # German interfa
 | Argument | Meaning |
 |---|---|
 | `url` | video URL (without it — interactive mode) |
-| `quality` | `max` / `medium` / `low` / `audio` |
+| `quality` | `max` / `medium` / `low` / `audio` / `text` |
+| `--abitrate` | mp3 bitrate for `audio` and `--mp3`: `128k`/`192k`/`320k` (default 192k) |
 | `--lang`, `-l` | audio and transcript language (default: `ru`) |
 | `--mp3` | additionally save an mp3 track next to the mp4 |
 | `-o`, `--output` | output folder (default: `downloads`) |
 | `--ui-lang`, `-u` | interface language: `en`/`ru`/`uk`/`pt`/`de`/`fr` |
 
 The interface language is auto-detected from your system locale (`LANG`/`LC_ALL`); use `--ui-lang` to override, or set the `YTD_LANG` environment variable.
+
+Waiting queue commands:
+
+```bash
+python download.py --check-queue     # check the queue and download whatever became available
+python download.py --watch 30        # keep watching the queue, checking every 30 minutes (Ctrl+C to stop)
+python download.py --queue-list      # show the queue
+python download.py --queue-remove URL
+```
+
+A video that is currently unavailable (private, removed, bot-check) is added to the queue automatically; the queue is also checked automatically on every run.
 
 Full help: `python download.py --help`
 
@@ -107,6 +122,7 @@ Result in `downloads/`:
 ```
 Video title.mp4                  # video (or .mp3 in audio mode)
 Video title.mp3                  # with --mp3 or quality=audio
+Video title [320k].mp3           # audio at a non-default bitrate
 Video title.transcript.txt       # transcript from subtitles
 ```
 
@@ -118,9 +134,9 @@ python web_server.py
 
 Open **http://127.0.0.1:5000** in your browser:
 
-1. Paste a link → **“Get info”**: thumbnail, author, duration, available resolutions, subtitle availability, status (“new” / “already downloaded”)
-2. Pick quality and language → **“Download”**: live progress bar and console log
-3. Below — the list of ready files (download right from the browser) and the full download log
+1. Paste a link → **“Get info”**: thumbnail, author, duration, available resolutions, subtitle availability, status (“new”, or exactly what is already downloaded: video 1080p, mp3, transcript)
+2. Pick quality, language and mp3 bitrate → **“Download”**: live progress bar and console log
+3. Below — the list of ready files (download right from the browser), the full download log and the waiting-queue card with a “Check now” button
 
 The interface language is chosen with the 🌐 selector in the top-right corner; the choice is remembered in the browser. The download log/console output follows the selected language too.
 
@@ -139,7 +155,7 @@ A static site (GitHub Pages) won't work here — a Python backend is required. T
 The repository includes a manually triggered workflow `.github/workflows/download.yml`:
 
 1. Open the **Actions** tab → **Download YouTube video** → **Run workflow**
-2. Provide the URL, quality (`max`/`medium`/`low`/`audio`), content language, interface language, and whether mp3 is needed
+2. Provide the URL, quality (`max`/`medium`/`low`/`audio`/`text`), mp3 bitrate, content language, interface language, and whether mp3 is needed
 3. Wait for completion → the run summary shows **artifact `youtube-download`** — download the zip with your files
 
 Nothing is stored in the repository: the run delivers only the media file itself (mp4/mp3) as a short-lived artifact (1 day). Download the zip from the run summary; for transcripts and logs, run the tool locally.
@@ -161,7 +177,7 @@ Every download appends an entry:
 - `download_log.txt` — machine-readable log (used to detect “already downloaded”);
 - `download_log.html` — a human-friendly table with links.
 
-To re-download a video, remove its ID from `download_log.txt` (and the file from `downloads/`).
+Duplicates are tracked per type and quality: the same video can be downloaded at several resolutions, several mp3 bitrates and as text. To re-download the exact same item, remove its line from `download_log.txt` — or simply delete the file from `downloads/`: entries whose file no longer exists are re-downloadable.
 
 ## Troubleshooting
 
@@ -173,6 +189,7 @@ To re-download a video, remove its ID from `download_log.txt` (and the file from
 | No transcript | The video has no subtitles. YouTube auto-generated captions are also supported when available |
 | “Address already in use” when starting the Web UI | On macOS port 5000 is often taken by AirPlay (Control Center) — run on another port: `PORT=8080 python web_server.py` |
 | pytubefix breaks after a YouTube update | `pip install -U pytubefix` — the library is actively patched as YouTube changes |
+| Video unavailable (private/removed) | It is placed in the waiting queue automatically — run with `--check-queue` or `--watch` (or press “Check now” in the Web UI) and it downloads once it becomes available |
 
 ## License
 

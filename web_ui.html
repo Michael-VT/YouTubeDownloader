@@ -109,6 +109,7 @@ a:hover{text-decoration:underline}
           <option value="medium" data-i18n="web_q_medium">Среднее</option>
           <option value="low" data-i18n="web_q_low">Низкое</option>
           <option value="audio" data-i18n="web_q_audio">Только аудио (mp3)</option>
+          <option value="text" data-i18n="web_q_text">Только текст (транскрипция)</option>
         </select>
       </div>
       <div>
@@ -121,6 +122,12 @@ a:hover{text-decoration:underline}
           <input type="checkbox" id="saveMp3" style="margin-right:8px">
           <span data-i18n="web_save_mp3">Сохранить mp3 рядом с mp4</span>
         </label>
+        <label for="abitrate" data-i18n="web_abitrate_label" style="margin-top:10px">Битрейт mp3 (для аудио)</label>
+        <select id="abitrate">
+          <option value="128k">128 kbps</option>
+          <option value="192k" selected>192 kbps</option>
+          <option value="320k">320 kbps</option>
+        </select>
       </div>
     </div>
 
@@ -164,6 +171,15 @@ a:hover{text-decoration:underline}
   </div>
 
   <div class="card">
+    <h3 data-i18n="web_queue_title">⏳ Ожидание доступности</h3>
+    <div id="queueStatus" class="empty"></div>
+    <div id="queueList"><div class="empty">…</div></div>
+    <div class="actions">
+      <button id="btnQueueCheck" class="secondary" data-i18n="web_queue_btn_check">⌛ Проверить сейчас</button>
+    </div>
+  </div>
+
+  <div class="card">
     <h3 data-i18n="web_files_title">📁 Скачанные файлы</h3>
     <div id="filesList"><div class="empty">…</div></div>
   </div>
@@ -184,8 +200,12 @@ const LANGS = ["en", "ru", "uk", "pt", "de", "fr"];
 let I18N = {};
 let LANG = "en";
 
-const tr = key =>
-  (I18N[LANG] && I18N[LANG][key]) || (I18N.en && I18N.en[key]) || key;
+const tr = (key, params) => {
+  let s = (I18N[LANG] && I18N[LANG][key]) || (I18N.en && I18N.en[key]) || key;
+  if (params) for (const [k, v] of Object.entries(params))
+    s = s.split("{" + k + "}").join(v);
+  return s;
+};
 
 function detectLang() {
   const saved = localStorage.getItem("ytd_lang");
@@ -208,7 +228,7 @@ function applyI18n() {
   const llt = tr("web_lang");
   if (llt !== "web_lang") ll.textContent = llt;
   $("langSelect").value = LANG;
-  loadFiles(); loadLog();
+  loadFiles(); loadLog(); loadQueue();
 }
 
 async function initI18n() {
@@ -256,8 +276,14 @@ async function fetchInfo() {
     $("infoId").textContent = d.id;
 
     const st = $("infoStatus");
-    st.innerHTML = d.already_downloaded
-      ? '<span class="badge warn">' + escapeHtml(tr("web_badge_downloaded")) + '</span>'
+    const ex = d.existing || {};
+    const parts = [];
+    if (ex.video?.length) parts.push(tr("web_lbl_video") + " " + ex.video.join(", "));
+    if (ex.audio?.length) parts.push(tr("web_lbl_audio") + " " +
+      ex.audio.map(a => a.replace("audio/mp3-", "mp3 ")).join(", "));
+    if (ex.transcript) parts.push(tr("web_lbl_transcript"));
+    st.innerHTML = parts.length
+      ? '<span class="badge warn">' + escapeHtml(parts.join(" • ")) + '</span>'
       : '<span class="badge ok">' + escapeHtml(tr("web_badge_new")) + '</span>';
 
     const resList = d.resolutions?.length
@@ -285,6 +311,7 @@ async function startDownload() {
     quality: $("quality").value,
     lang: $("lang").value.trim() || "ru",
     save_mp3: $("saveMp3").checked,
+    abitrate: $("abitrate").value,
     ui_lang: LANG
   };
 
@@ -421,16 +448,67 @@ async function loadLog() {
   }
 }
 
+// ====== Очередь ожидания ======
+async function loadQueue() {
+  try {
+    const r = await fetch("/api/queue");
+    const q = await r.json();
+    if (!q.length) {
+      $("queueList").innerHTML = '<div class="empty">' + escapeHtml(tr("web_queue_empty")) + '</div>';
+      return;
+    }
+    let h = "<table><thead><tr><th>" + escapeHtml(tr("web_queue_col_url")) + "</th><th>" +
+            escapeHtml(tr("web_queue_col_quality")) + "</th><th>" +
+            escapeHtml(tr("web_queue_col_added")) + "</th><th>" +
+            escapeHtml(tr("web_queue_col_reason")) + "</th></tr></thead><tbody>";
+    for (const it of q) {
+      h += `<tr><td>${escapeHtml(it.url)}</td><td>${escapeHtml(it.quality)}</td>
+            <td>${escapeHtml(it.added_at || "")}</td><td>${escapeHtml(it.reason || "")}</td></tr>`;
+    }
+    h += "</tbody></table>";
+    $("queueList").innerHTML = h;
+  } catch (e) {
+    $("queueList").innerHTML = '<div class="empty">' +
+      escapeHtml(tr("web_err_prefix") + e.message) + '</div>';
+  }
+}
+
+async function checkQueue() {
+  const btn = $("btnQueueCheck");
+  btn.disabled = true;
+  try {
+    const r = await fetch("/api/queue/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ui_lang: LANG })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || tr("web_err_server"));
+    $("queueStatus").textContent = tr("web_queue_checked",
+      { resolved: d.resolved, remaining: d.remaining });
+    if (typeof d.log === "string" && d.log) {
+      $("logConsole").textContent = d.log;
+      $("progressCard").classList.remove("hidden");
+    }
+    loadQueue(); loadLog(); loadFiles();
+  } catch (e) {
+    alert(tr("web_err_prefix") + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 // ====== События ======
 $("btnInfo").addEventListener("click", fetchInfo);
 $("btnDownload").addEventListener("click", startDownload);
+$("btnQueueCheck").addEventListener("click", checkQueue);
 $("url").addEventListener("keydown", e => {
   if (e.key === "Enter") fetchInfo();
 });
 
 // Автообновление
 initI18n();
-setInterval(() => { loadFiles(); loadLog(); }, 10000);
+setInterval(() => { loadFiles(); loadLog(); loadQueue(); }, 10000);
 </script>
 </body>
 </html>

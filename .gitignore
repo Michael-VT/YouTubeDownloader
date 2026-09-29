@@ -3,6 +3,7 @@ downloads/
 download/
 download_log.txt
 download_log.html
+pending_queue.json
 
 # Python
 __pycache__/

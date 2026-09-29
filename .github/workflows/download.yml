@@ -18,6 +18,7 @@ on:
           - medium
           - low
           - audio
+          - text
       lang:
         description: "Язык аудио/транскрипции"
         default: "ru"
@@ -30,6 +31,11 @@ on:
         description: "Дополнительно сохранить mp3 рядом с mp4"
         type: boolean
         default: false
+      abitrate:
+        description: "Битрейт mp3 (для режима audio)"
+        type: choice
+        default: "192k"
+        options: [128k, 192k, 320k]
 
 permissions:
   contents: read
@@ -60,8 +66,9 @@ jobs:
           YDL_LANG: ${{ inputs.lang }}
           YDL_UI_LANG: ${{ inputs.ui_lang }}
           YDL_MP3: ${{ inputs.save_mp3 }}
+          YDL_ABITRATE: ${{ inputs.abitrate }}
         run: |
-          ARGS=("$YDL_URL" "$YDL_QUALITY" --lang "$YDL_LANG" --ui-lang "$YDL_UI_LANG" -o downloads)
+          ARGS=("$YDL_URL" "$YDL_QUALITY" --abitrate "$YDL_ABITRATE" --lang "$YDL_LANG" --ui-lang "$YDL_UI_LANG" -o downloads)
           if [ "$YDL_MP3" = "true" ]; then ARGS+=(--mp3); fi
           python download.py "${ARGS[@]}"
 

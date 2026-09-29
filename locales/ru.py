@@ -4,11 +4,16 @@ STRINGS = {
     # ---------- CLI: argparse ----------
     "app_desc": "Скачивание видео, аудио и транскрипций с YouTube.",
     "help_url": "Ссылка на YouTube-видео",
-    "help_quality": "Качество: max / medium / low / audio",
+    "help_quality": "Качество: max / medium / low / audio / text",
     "help_lang": "Язык аудио/транскрипции (по умолчанию: {default})",
     "help_mp3": "Дополнительно сохранить mp3-дорожку",
     "help_output": "Папка для сохранения (по умолчанию: downloads)",
     "help_ui_lang": "Язык интерфейса: en/ru/uk/pt/de/fr (по умолчанию: авто)",
+    "help_abitrate": "Битрейт mp3 для режимов audio/--mp3 (128k/192k/320k, по умолчанию 192k)",
+    "help_check_queue": "Проверить очередь ожидания (не стало ли что-то доступным) и выйти",
+    "help_queue_list": "Показать очередь ожидания",
+    "help_queue_remove": "Убрать ссылку из очереди ожидания",
+    "help_watch": "Следить за очередью: проверять каждые N минут (по умолчанию 15)",
 
     # ---------- CLI: interactive ----------
     "choose_quality": "Выберите качество:",
@@ -16,7 +21,8 @@ STRINGS = {
     "q_medium": "  2 — среднее",
     "q_low": "  3 — низкое",
     "q_audio": "  4 — только аудио (mp3)",
-    "prompt_quality": "Номер (1/2/3/4) [1]: ",
+    "q_text": "  5 — только текст (транскрипция)",
+    "prompt_quality": "Номер (1/2/3/4/5) [1]: ",
     "prompt_url": "🔗 Ссылка на YouTube: ",
     "prompt_lang": "Язык аудио/транскрипции [{default}]: ",
     "prompt_mp3": "Сохранить также mp3-дорожку? (y/N): ",
@@ -29,16 +35,24 @@ STRINGS = {
   medium  — среднее
   low     — минимальное (144p–360p)
   audio   — только аудио в mp3 (удобно слушать в пути)
+  text    — только текст (транскрипция из субтитров)
 
 ДОПОЛНИТЕЛЬНО:
   --mp3            дополнительно сохранить mp3-дорожку рядом с mp4
+  --abitrate RATE  битрейт mp3: 128k/192k/320k (по умолчанию 192k)
   --lang ru|en|…   язык аудио и транскрипции (по умолчанию ru)
   --ui-lang LL     язык интерфейса: en/ru/uk/pt/de/fr (по умолчанию авто)
   -o DIR           папка для сохранения (по умолчанию downloads)
+  --check-queue    проверить очередь ожидания и скачать ставшее доступным
+  --queue-list     показать очередь ожидания
+  --queue-remove U убрать ссылку из очереди ожидания
+  --watch [MIN]    следить за очередью: проверка каждые MIN минут (по умолчанию 15)
 
 ПРИМЕРЫ:
   python download.py "https://youtu.be/XXXX" max
   python download.py "https://youtu.be/XXXX" audio
+  python download.py "https://youtu.be/XXXX" text
+  python download.py "https://youtu.be/XXXX" audio --abitrate 320k
   python download.py "https://youtu.be/XXXX" medium --lang en
   python download.py "https://youtu.be/XXXX" max --mp3 -o video
   python download.py "https://youtu.be/XXXX" max --ui-lang de
@@ -48,9 +62,16 @@ STRINGS = {
     # ---------- Fetch / info ----------
     "info_log_entries": "ℹ️  В журнале уже {count} записей.",
     "err_get_video": "❌ Ошибка получения видео: {error}",
-    "warn_already_downloaded": "⚠️  Уже скачано ранее. Пропускаем.",
-    "already_id": "   ID: {id}",
-    "already_title": "   Название: {title}",
+    "err_bad_url": "❌ Некорректная ссылка: {error}",
+    "already_summary": "📦 Уже скачано для этого видео: {items}",
+    "sum_video": "видео {res}",
+    "sum_audio": "аудио {value}",
+    "sum_transcript": "транскрипция",
+    "already_video_quality": "⚠️  Видео в качестве {res} уже скачано. Пропускаю.",
+    "already_audio_quality": "⚠️  Аудио mp3 {bitrate} уже скачано. Пропускаю.",
+    "already_transcript": "⚠️  Транскрипция уже скачана: {path}",
+    "info_transcript_exists": "ℹ️  Транскрипция уже есть — повторно не качаю.",
+    "err_no_captions_text": "❌ Субтитры недоступны — текст этого видео получить нельзя.",
     "video_title": "🎬 Название: {title}",
     "video_author": "👤 Автор: {author}",
     "video_duration": "⏱  Длительность: {duration}",
@@ -127,6 +148,23 @@ STRINGS = {
     "html_col_size": "Размер",
     "html_col_audio_file": "Аудио-файл",
 
+    # ---------- Очередь ожидания ----------
+    "queue_added": "📥 Видео сейчас недоступно — добавлено в очередь ожидания.",
+    "queue_hint": "   Проверить: --check-queue; следить: --watch; список: --queue-list.",
+    "queue_already": "ℹ️  Это видео уже стоит в очереди ожидания.",
+    "queue_count": "⏳ В очереди ожидания: {count} — проверяю…",
+    "queue_checking": "⌛ Проверяю очередь ожидания…",
+    "queue_empty": "✅ Очередь ожидания пуста.",
+    "queue_resolved": "🎉 Видео стало доступно — скачиваю: {title}",
+    "queue_still_unavailable": "   • всё ещё недоступно: {url} ({reason})",
+    "queue_watching": "👀 Слежу за очередью ожидания: проверка каждые {minutes} мин (Ctrl+C — выход).",
+    "queue_done_watching": "✅ Очередь пуста — слежение завершено.",
+    "queue_watch_stopped": "👋 Слежение остановлено.",
+    "queue_list_header": "⏳ Очередь ожидания:",
+    "queue_list_line": "   • [{quality}] {url} — добавлено {added}; причина: {reason}",
+    "queue_removed": "🗑 Убрано из очереди: {url}",
+    "queue_not_found": "ℹ️  Этой ссылки нет в очереди: {url}",
+
     # ---------- Web server ----------
     "srv_url_missing": "URL не указан",
     "srv_bad_quality": "Неверное качество",
@@ -134,6 +172,8 @@ STRINGS = {
     "srv_open_browser": "🌐 Открой в браузере: {url}",
     "srv_task_starting": "Запуск…",
     "srv_task_done": "Готово",
+    "srv_task_failed": "Скачивание не удалось",
+    "srv_bad_abitrate": "Неверный битрейт mp3",
 
     # ---------- Web UI ----------
     "web_app_title": "🎬 YouTube Downloader",
@@ -146,8 +186,10 @@ STRINGS = {
     "web_q_medium": "Среднее",
     "web_lang_audio": "Язык аудио / транскрипции",
     "web_q_audio": "Только аудио (mp3)",
+    "web_q_text": "Только текст (транскрипция)",
     "web_extra_label": "Дополнительно",
     "web_save_mp3": "Сохранить mp3 рядом с mp4",
+    "web_abitrate_label": "Битрейт mp3 (для аудио)",
     "web_btn_info": "🔍 Получить информацию",
     "web_btn_download": "⬇️ Скачать",
     "web_btn_loading": '<span class="spinner"></span>Загрузка…',
@@ -160,7 +202,9 @@ STRINGS = {
     "web_captions_yes": "  •  есть субтитры",
     "web_captions_no": "  •  субтитров нет",
     "web_badge_new": "Новое",
-    "web_badge_downloaded": "Уже скачано",
+    "web_lbl_video": "видео",
+    "web_lbl_audio": "аудио",
+    "web_lbl_transcript": "текст",
     "web_progress_title": "Прогресс скачивания",
     "web_files_title": "📁 Скачанные файлы",
     "web_log_title": "📊 Журнал загрузок",
@@ -181,4 +225,12 @@ STRINGS = {
     "web_error_prefix": "❌ Ошибка: ",
     "web_launching": "Запуск…",
     "web_done": "✅ Готово",
+    "web_queue_title": "⏳ Ожидание доступности",
+    "web_queue_empty": "Очередь пуста",
+    "web_queue_col_url": "Ссылка",
+    "web_queue_col_quality": "Качество",
+    "web_queue_col_added": "Добавлено",
+    "web_queue_col_reason": "Причина",
+    "web_queue_btn_check": "⌛ Проверить сейчас",
+    "web_queue_checked": "Проверено: скачано {resolved}, осталось в очереди {remaining}",
 }

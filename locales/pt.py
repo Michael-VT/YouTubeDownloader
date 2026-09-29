@@ -4,11 +4,16 @@ STRINGS = {
     # ---------- CLI: argparse ----------
     "app_desc": "Baixe vídeos, áudio e transcrições do YouTube.",
     "help_url": "URL do vídeo do YouTube",
-    "help_quality": "Qualidade: max / medium / low / audio",
+    "help_quality": "Qualidade: max / medium / low / audio / text",
     "help_lang": "Idioma do áudio/transcrição (padrão: {default})",
     "help_mp3": "Salvar também uma faixa mp3",
     "help_output": "Pasta de saída (padrão: downloads)",
     "help_ui_lang": "Idioma da interface: en/ru/uk/pt/de/fr (padrão: detecção automática)",
+    "help_abitrate": "Bitrate mp3 para os modos audio/--mp3 (128k/192k/320k, padrão 192k)",
+    "help_check_queue": "Verificar a fila de espera (se algo ficou disponível) e sair",
+    "help_queue_list": "Mostrar a fila de espera",
+    "help_queue_remove": "Remover um link da fila de espera",
+    "help_watch": "Vigiar a fila: verificar a cada N minutos (padrão 15)",
 
     # ---------- CLI: interactive ----------
     "choose_quality": "Escolha a qualidade:",
@@ -16,7 +21,8 @@ STRINGS = {
     "q_medium": "  2 — média",
     "q_low": "  3 — baixa",
     "q_audio": "  4 — somente áudio (mp3)",
-    "prompt_quality": "Número (1/2/3/4) [1]: ",
+    "q_text": "  5 — apenas texto (transcrição)",
+    "prompt_quality": "Número (1/2/3/4/5) [1]: ",
     "prompt_url": "🔗 URL do YouTube: ",
     "prompt_lang": "Idioma do áudio/transcrição [{default}]: ",
     "prompt_mp3": "Salvar também uma faixa mp3? (y/N): ",
@@ -29,16 +35,24 @@ MODOS DE QUALIDADE:
   medium  — média
   low     — mais baixa (144p–360p)
   audio   — somente áudio em mp3 (ótimo para ouvir em qualquer lugar)
+  text    — apenas texto (transcrição das legendas)
 
 OPÇÕES EXTRAS:
   --mp3            salva também uma faixa mp3 junto ao mp4
+  --abitrate RATE  bitrate mp3: 128k/192k/320k (padrão 192k)
   --lang ru|en|…   idioma do áudio e da transcrição (padrão: ru)
   --ui-lang LL     idioma da interface: en/ru/uk/pt/de/fr (padrão: automático)
   -o DIR           pasta de saída (padrão: downloads)
+  --check-queue    verificar a fila de espera e baixar o que ficou disponível
+  --queue-list     mostrar a fila de espera
+  --queue-remove U remover um link da fila de espera
+  --watch [MIN]    vigiar a fila: verificação a cada MIN minutos (padrão 15)
 
 EXEMPLOS:
   python download.py "https://youtu.be/XXXX" max
   python download.py "https://youtu.be/XXXX" audio
+  python download.py "https://youtu.be/XXXX" text
+  python download.py "https://youtu.be/XXXX" audio --abitrate 320k
   python download.py "https://youtu.be/XXXX" medium --lang en
   python download.py "https://youtu.be/XXXX" max --mp3 -o video
   python download.py "https://youtu.be/XXXX" max --ui-lang de
@@ -48,9 +62,16 @@ SEM ARGUMENTOS, a ferramenta entra no modo interativo e pergunta passo a passo."
     # ---------- Fetch / info ----------
     "info_log_entries": "ℹ️  O registro já contém {count} entradas.",
     "err_get_video": "❌ Erro ao obter o vídeo: {error}",
-    "warn_already_downloaded": "⚠️  Já baixado anteriormente. Ignorando.",
-    "already_id": "   ID: {id}",
-    "already_title": "   Título: {title}",
+    "err_bad_url": "❌ Link inválido: {error}",
+    "already_summary": "📦 Já baixado para este vídeo: {items}",
+    "sum_video": "vídeo {res}",
+    "sum_audio": "áudio {value}",
+    "sum_transcript": "transcrição",
+    "already_video_quality": "⚠️  Vídeo em {res} já foi baixado. Ignorando.",
+    "already_audio_quality": "⚠️  Áudio mp3 {bitrate} já foi baixado. Ignorando.",
+    "already_transcript": "⚠️  Transcrição já foi baixada: {path}",
+    "info_transcript_exists": "ℹ️  A transcrição já existe — não baixo de novo.",
+    "err_no_captions_text": "❌ Legendas indisponíveis — não é possível obter o texto deste vídeo.",
     "video_title": "🎬 Título: {title}",
     "video_author": "👤 Autor: {author}",
     "video_duration": "⏱  Duração: {duration}",
@@ -127,6 +148,23 @@ SEM ARGUMENTOS, a ferramenta entra no modo interativo e pergunta passo a passo."
     "html_col_size": "Tamanho",
     "html_col_audio_file": "Arquivo de áudio",
 
+    # ---------- Fila de espera ----------
+    "queue_added": "📥 O vídeo está indisponível agora — adicionado à fila de espera.",
+    "queue_hint": "   Verificar: --check-queue; vigiar: --watch; lista: --queue-list.",
+    "queue_already": "ℹ️  Este vídeo já está na fila de espera.",
+    "queue_count": "⏳ Na fila de espera: {count} — verificando…",
+    "queue_checking": "⌛ Verificando a fila de espera…",
+    "queue_empty": "✅ A fila de espera está vazia.",
+    "queue_resolved": "🎉 O vídeo ficou disponível — baixando: {title}",
+    "queue_still_unavailable": "   • ainda indisponível: {url} ({reason})",
+    "queue_watching": "👀 Vigiando a fila de espera: verificação a cada {minutes} min (Ctrl+C para sair).",
+    "queue_done_watching": "✅ Fila vazia — vigilância encerrada.",
+    "queue_watch_stopped": "👋 Vigilância interrompida.",
+    "queue_list_header": "⏳ Fila de espera:",
+    "queue_list_line": "   • [{quality}] {url} — adicionado {added}; motivo: {reason}",
+    "queue_removed": "🗑 Removido da fila: {url}",
+    "queue_not_found": "ℹ️  Este link não está na fila: {url}",
+
     # ---------- Web server ----------
     "srv_url_missing": "URL ausente",
     "srv_bad_quality": "Qualidade inválida",
@@ -134,6 +172,8 @@ SEM ARGUMENTOS, a ferramenta entra no modo interativo e pergunta passo a passo."
     "srv_open_browser": "🌐 Abra no seu navegador: {url}",
     "srv_task_starting": "Iniciando…",
     "srv_task_done": "Concluído",
+    "srv_task_failed": "O download falhou",
+    "srv_bad_abitrate": "Bitrate mp3 inválido",
 
     # ---------- Web UI ----------
     "web_app_title": "🎬 YouTube Downloader",
@@ -146,8 +186,10 @@ SEM ARGUMENTOS, a ferramenta entra no modo interativo e pergunta passo a passo."
     "web_q_medium": "Média",
     "web_lang_audio": "Idioma do áudio / transcrição",
     "web_q_audio": "Somente áudio (mp3)",
+    "web_q_text": "Apenas texto (transcrição)",
     "web_extra_label": "Extras",
     "web_save_mp3": "Salvar também mp3 junto ao mp4",
+    "web_abitrate_label": "Bitrate mp3 (para áudio)",
     "web_btn_info": "🔍 Obter informações",
     "web_btn_download": "⬇️ Baixar",
     "web_btn_loading": '<span class="spinner"></span>Carregando…',
@@ -160,7 +202,9 @@ SEM ARGUMENTOS, a ferramenta entra no modo interativo e pergunta passo a passo."
     "web_captions_yes": "  •  legendas disponíveis",
     "web_captions_no": "  •  sem legendas",
     "web_badge_new": "Novo",
-    "web_badge_downloaded": "Já baixado",
+    "web_lbl_video": "vídeo",
+    "web_lbl_audio": "áudio",
+    "web_lbl_transcript": "texto",
     "web_progress_title": "Progresso do download",
     "web_files_title": "📁 Arquivos baixados",
     "web_log_title": "📊 Registro de downloads",
@@ -181,4 +225,12 @@ SEM ARGUMENTOS, a ferramenta entra no modo interativo e pergunta passo a passo."
     "web_error_prefix": "❌ Erro: ",
     "web_launching": "Iniciando…",
     "web_done": "✅ Concluído",
+    "web_queue_title": "⏳ Esperando disponibilidade",
+    "web_queue_empty": "Fila vazia",
+    "web_queue_col_url": "Link",
+    "web_queue_col_quality": "Qualidade",
+    "web_queue_col_added": "Adicionado",
+    "web_queue_col_reason": "Motivo",
+    "web_queue_btn_check": "⌛ Verificar agora",
+    "web_queue_checked": "Verificado: {resolved} baixados, {remaining} restam na fila",
 }
